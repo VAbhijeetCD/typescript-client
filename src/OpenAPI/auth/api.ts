@@ -16,14 +16,14 @@ const BASE_PATH = "https://api.chatdaddy.tech/auth".replace(/\/+$/, "");
 
 
 import type { Configuration } from '../configuration';
-import type { AxiosPromise, AxiosInstance, AxiosRequestConfig } from 'axios';
+import type { AxiosPromise, AxiosInstance, RawAxiosRequestConfig } from 'axios';
 import globalAxios from 'axios';
 // Some imports not used depending on template conditions
 // @ts-ignore
 import { DUMMY_BASE_URL, assertParamExists, setApiKeyToObject, setBasicAuthToObject, setBearerAuthToObject, setOAuthToObject, setSearchParams, serializeDataIfNeeded, toPathString, createRequestFunction } from '../common';
 import type { RequestArgs } from '../base';
 // @ts-ignore
-import { COLLECTION_FORMATS, BaseAPI, RequiredError } from '../base';
+import { COLLECTION_FORMATS, BaseAPI, RequiredError, operationServerMap } from '../base';
 
 /**
  * 
@@ -217,7 +217,7 @@ export interface AnnouncementMetadata {
      * @type {string}
      * @memberof AnnouncementMetadata
      */
-    'repeatOption'?: AnnouncementMetadataRepeatOptionEnum;
+    'repeatOption'?: AnnouncementMetadataRepeatOptionEnum | null;
     /**
      * array of string URLs for URL filtering.
      * @type {Array<string>}
@@ -229,8 +229,7 @@ export interface AnnouncementMetadata {
 export const AnnouncementMetadataRepeatOptionEnum = {
     EveryVisit: 'every-visit',
     OncePerDay: 'once-per-day',
-    OncePerWeek: 'once-per-week',
-    Null: null as null
+    OncePerWeek: 'once-per-week'
 } as const;
 
 export type AnnouncementMetadataRepeatOptionEnum = typeof AnnouncementMetadataRepeatOptionEnum[keyof typeof AnnouncementMetadataRepeatOptionEnum];
@@ -294,7 +293,7 @@ export interface AnnouncementPatch {
      * @type {string}
      * @memberof AnnouncementPatch
      */
-    'repeatOption'?: AnnouncementPatchRepeatOptionEnum;
+    'repeatOption'?: AnnouncementPatchRepeatOptionEnum | null;
     /**
      * array of string URLs for URL filtering.
      * @type {Array<string>}
@@ -306,8 +305,7 @@ export interface AnnouncementPatch {
 export const AnnouncementPatchRepeatOptionEnum = {
     EveryVisit: 'every-visit',
     OncePerDay: 'once-per-day',
-    OncePerWeek: 'once-per-week',
-    Null: null as null
+    OncePerWeek: 'once-per-week'
 } as const;
 
 export type AnnouncementPatchRepeatOptionEnum = typeof AnnouncementPatchRepeatOptionEnum[keyof typeof AnnouncementPatchRepeatOptionEnum];
@@ -495,19 +493,6 @@ export const BoutirTokenRequestTypeEnum = {
 export type BoutirTokenRequestTypeEnum = typeof BoutirTokenRequestTypeEnum[keyof typeof BoutirTokenRequestTypeEnum];
 
 /**
- * 
- * @export
- * @interface ConfirmOtp200Response
- */
-export interface ConfirmOtp200Response {
-    /**
-     * 
-     * @type {boolean}
-     * @memberof ConfirmOtp200Response
-     */
-    'success'?: boolean;
-}
-/**
  * @type EitherRoleOrScopes
  * @export
  */
@@ -548,12 +533,6 @@ export interface EitherRoleOrScopesOneOf1 {
  */
 export interface ExternalTokenPostResponse {
     /**
-     * Was the user just created
-     * @type {boolean}
-     * @memberof ExternalTokenPostResponse
-     */
-    'created'?: boolean;
-    /**
      * 
      * @type {string}
      * @memberof ExternalTokenPostResponse
@@ -571,17 +550,10 @@ export interface ExternalTokenPostResponse {
      * @memberof ExternalTokenPostResponse
      */
     'refresh_token_expiry'?: string;
-}
-/**
- * 
- * @export
- * @interface ExternalTokenPostResponseAllOf
- */
-export interface ExternalTokenPostResponseAllOf {
     /**
      * Was the user just created
      * @type {boolean}
-     * @memberof ExternalTokenPostResponseAllOf
+     * @memberof ExternalTokenPostResponse
      */
     'created'?: boolean;
 }
@@ -1323,49 +1295,11 @@ export interface OtpPostRequest {
      */
     'phoneNumber': string;
     /**
-     * Optionally specify the OTP template type
-     * @type {string}
-     * @memberof OtpPostRequest
-     */
-    'template'?: string;
-    /**
      * Specify the Recaptcha token
      * @type {string}
      * @memberof OtpPostRequest
      */
     'captchaToken'?: string;
-}
-/**
- * 
- * @export
- * @interface OtpTokenPost200Response
- */
-export interface OtpTokenPost200Response {
-    /**
-     * 
-     * @type {string}
-     * @memberof OtpTokenPost200Response
-     */
-    'access_token': string;
-}
-/**
- * 
- * @export
- * @interface OtpTokenPostRequest
- */
-export interface OtpTokenPostRequest {
-    /**
-     * 
-     * @type {string}
-     * @memberof OtpTokenPostRequest
-     */
-    'phoneNumber': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof OtpTokenPostRequest
-     */
-    'otp': string;
 }
 /**
  * 
@@ -1431,17 +1365,17 @@ export interface PasswordAuthRequest {
      */
     'returnRefreshToken'?: boolean;
     /**
-     * Base64 encoded SHA256 of the plaintext password, or the plaintext itself. See \"passwordEncoding\" below
+     * plaintext/base64Sha256 of the password, depending on the passwordEncoding
      * @type {string}
      * @memberof PasswordAuthRequest
      */
     'password': string;
     /**
-     * describe how the password is encoded
-     * @type {string}
+     * 
+     * @type {PasswordEncoding}
      * @memberof PasswordAuthRequest
      */
-    'passwordEncoding'?: PasswordAuthRequestPasswordEncodingEnum;
+    'passwordEncoding'?: PasswordEncoding;
     /**
      * The team ID to generate the token for, lastUsedTeam will be used otherwise
      * @type {string}
@@ -1474,12 +1408,20 @@ export interface PasswordAuthRequest {
     'metadata'?: ActorMetadata;
 }
 
-export const PasswordAuthRequestPasswordEncodingEnum = {
+
+/**
+ * describe how the password is encoded
+ * @export
+ * @enum {string}
+ */
+
+export const PasswordEncoding = {
     ShaBase64: 'shaBase64',
     Plaintext: 'plaintext'
 } as const;
 
-export type PasswordAuthRequestPasswordEncodingEnum = typeof PasswordAuthRequestPasswordEncodingEnum[keyof typeof PasswordAuthRequestPasswordEncodingEnum];
+export type PasswordEncoding = typeof PasswordEncoding[keyof typeof PasswordEncoding];
+
 
 /**
  * A refresh token allows you to generate access tokens to access & update things on ChatDaddy services. A refresh token will expire and become invalidated after 14 days of no activity. 
@@ -1562,12 +1504,26 @@ export interface RefreshTokenLoginRequest {
  */
 export interface ResetPassword {
     /**
-     * 
+     * plaintext/base64Sha256 of the password, depending on the passwordEncoding
      * @type {string}
      * @memberof ResetPassword
      */
     'password': string;
+    /**
+     * 
+     * @type {PasswordEncoding}
+     * @memberof ResetPassword
+     */
+    'passwordEncoding'?: PasswordEncoding;
+    /**
+     * Logs out the user from all devices. If the user is logged in on the device, the user will be logged out.
+     * @type {boolean}
+     * @memberof ResetPassword
+     */
+    'logout'?: boolean;
 }
+
+
 /**
  * 
  * @export
@@ -1693,11 +1649,17 @@ export interface SubUserCreate {
      */
     'phoneNumber': number;
     /**
-     * Plaintext password pls
+     * plaintext/base64Sha256 of the password, depending on the passwordEncoding
      * @type {string}
      * @memberof SubUserCreate
      */
     'password': string;
+    /**
+     * 
+     * @type {PasswordEncoding}
+     * @memberof SubUserCreate
+     */
+    'passwordEncoding'?: PasswordEncoding;
     /**
      * 
      * @type {TeamMemberRole}
@@ -1707,25 +1669,6 @@ export interface SubUserCreate {
 }
 
 
-/**
- * 
- * @export
- * @interface SubUserPatchRequest
- */
-export interface SubUserPatchRequest {
-    /**
-     * 
-     * @type {string}
-     * @memberof SubUserPatchRequest
-     */
-    'password': string;
-    /**
-     * 
-     * @type {boolean}
-     * @memberof SubUserPatchRequest
-     */
-    'logout'?: boolean;
-}
 /**
  * 
  * @export
@@ -1963,6 +1906,12 @@ export interface TeamMetadata {
      * @memberof TeamMetadata
      */
     'industry'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof TeamMetadata
+     */
+    'subIndustry'?: string;
 }
 /**
  * 
@@ -1982,6 +1931,12 @@ export interface TeamPatchRequest {
      * @memberof TeamPatchRequest
      */
     'metadata'?: TeamMetadata;
+    /**
+     * The ISO country code of the team
+     * @type {string}
+     * @memberof TeamPatchRequest
+     */
+    'region'?: string;
     /**
      * 
      * @type {Array<TeamPatchRequestMembersInner>}
@@ -2410,11 +2365,23 @@ export interface UserPatch {
      */
     'otp'?: number;
     /**
-     * new password. Only admin access can modify
+     * plaintext/base64Sha256 of the password, depending on the passwordEncoding
      * @type {string}
      * @memberof UserPatch
      */
     'password'?: string;
+    /**
+     * 
+     * @type {PasswordEncoding}
+     * @memberof UserPatch
+     */
+    'passwordEncoding'?: PasswordEncoding;
+    /**
+     * Logs out the user from all devices. If the user is logged in on the device, the user will be logged out.
+     * @type {boolean}
+     * @memberof UserPatch
+     */
+    'logout'?: boolean;
     /**
      * A signature of the user to be used at the end of the message
      * @type {string}
@@ -2695,37 +2662,6 @@ export interface WidgetConfig {
 /**
  * 
  * @export
- * @interface WidgetConfigAllOf
- */
-export interface WidgetConfigAllOf {
-    /**
-     * 
-     * @type {string}
-     * @memberof WidgetConfigAllOf
-     */
-    'teamId': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof WidgetConfigAllOf
-     */
-    'createdAt': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof WidgetConfigAllOf
-     */
-    'updatedAt': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof WidgetConfigAllOf
-     */
-    'configUrl': string;
-}
-/**
- * 
- * @export
  * @interface WidgetConfigParams
  */
 export interface WidgetConfigParams {
@@ -2811,7 +2747,7 @@ export const APITokensApiAxiosParamCreator = function (configuration?: Configura
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiTokenDelete: async (tokens: Array<string>, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        apiTokenDelete: async (tokens: Array<string>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'tokens' is not null or undefined
             assertParamExists('apiTokenDelete', 'tokens', tokens)
             const localVarPath = `/api-token`;
@@ -2851,7 +2787,7 @@ export const APITokensApiAxiosParamCreator = function (configuration?: Configura
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiTokenGet: async (options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        apiTokenGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/api-token`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -2886,7 +2822,7 @@ export const APITokensApiAxiosParamCreator = function (configuration?: Configura
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiTokenPost: async (apiTokenPostRequest?: ApiTokenPostRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        apiTokenPost: async (apiTokenPostRequest?: ApiTokenPostRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/api-token`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -2924,7 +2860,7 @@ export const APITokensApiAxiosParamCreator = function (configuration?: Configura
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiTokenValidatePost: async (apiTokenValidatePostRequest?: ApiTokenValidatePostRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        apiTokenValidatePost: async (apiTokenValidatePostRequest?: ApiTokenValidatePostRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/api-token/validate`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -2968,9 +2904,11 @@ export const APITokensApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiTokenDelete(tokens: Array<string>, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async apiTokenDelete(tokens: Array<string>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.apiTokenDelete(tokens, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['APITokensApi.apiTokenDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -2978,9 +2916,11 @@ export const APITokensApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiTokenGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ApiTokenGet200Response>> {
+        async apiTokenGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ApiTokenGet200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.apiTokenGet(options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['APITokensApi.apiTokenGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -2989,9 +2929,11 @@ export const APITokensApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiTokenPost(apiTokenPostRequest?: ApiTokenPostRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ApiToken>> {
+        async apiTokenPost(apiTokenPostRequest?: ApiTokenPostRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ApiToken>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.apiTokenPost(apiTokenPostRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['APITokensApi.apiTokenPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -3000,9 +2942,11 @@ export const APITokensApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiTokenValidatePost(apiTokenValidatePostRequest?: ApiTokenValidatePostRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<JWT>> {
+        async apiTokenValidatePost(apiTokenValidatePostRequest?: ApiTokenValidatePostRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<JWT>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.apiTokenValidatePost(apiTokenValidatePostRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['APITokensApi.apiTokenValidatePost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -3021,7 +2965,7 @@ export const APITokensApiFactory = function (configuration?: Configuration, base
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiTokenDelete(requestParameters: APITokensApiApiTokenDeleteRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        apiTokenDelete(requestParameters: APITokensApiApiTokenDeleteRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.apiTokenDelete(requestParameters.tokens, options).then((request) => request(axios, basePath));
         },
         /**
@@ -3030,7 +2974,7 @@ export const APITokensApiFactory = function (configuration?: Configuration, base
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiTokenGet(options?: AxiosRequestConfig): AxiosPromise<ApiTokenGet200Response> {
+        apiTokenGet(options?: RawAxiosRequestConfig): AxiosPromise<ApiTokenGet200Response> {
             return localVarFp.apiTokenGet(options).then((request) => request(axios, basePath));
         },
         /**
@@ -3040,7 +2984,7 @@ export const APITokensApiFactory = function (configuration?: Configuration, base
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiTokenPost(requestParameters: APITokensApiApiTokenPostRequest = {}, options?: AxiosRequestConfig): AxiosPromise<ApiToken> {
+        apiTokenPost(requestParameters: APITokensApiApiTokenPostRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<ApiToken> {
             return localVarFp.apiTokenPost(requestParameters.apiTokenPostRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -3050,7 +2994,7 @@ export const APITokensApiFactory = function (configuration?: Configuration, base
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiTokenValidatePost(requestParameters: APITokensApiApiTokenValidatePostRequest = {}, options?: AxiosRequestConfig): AxiosPromise<JWT> {
+        apiTokenValidatePost(requestParameters: APITokensApiApiTokenValidatePostRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<JWT> {
             return localVarFp.apiTokenValidatePost(requestParameters.apiTokenValidatePostRequest, options).then((request) => request(axios, basePath));
         },
     };
@@ -3113,7 +3057,7 @@ export class APITokensApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof APITokensApi
      */
-    public apiTokenDelete(requestParameters: APITokensApiApiTokenDeleteRequest, options?: AxiosRequestConfig) {
+    public apiTokenDelete(requestParameters: APITokensApiApiTokenDeleteRequest, options?: RawAxiosRequestConfig) {
         return APITokensApiFp(this.configuration).apiTokenDelete(requestParameters.tokens, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -3124,7 +3068,7 @@ export class APITokensApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof APITokensApi
      */
-    public apiTokenGet(options?: AxiosRequestConfig) {
+    public apiTokenGet(options?: RawAxiosRequestConfig) {
         return APITokensApiFp(this.configuration).apiTokenGet(options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -3136,7 +3080,7 @@ export class APITokensApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof APITokensApi
      */
-    public apiTokenPost(requestParameters: APITokensApiApiTokenPostRequest = {}, options?: AxiosRequestConfig) {
+    public apiTokenPost(requestParameters: APITokensApiApiTokenPostRequest = {}, options?: RawAxiosRequestConfig) {
         return APITokensApiFp(this.configuration).apiTokenPost(requestParameters.apiTokenPostRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -3148,10 +3092,11 @@ export class APITokensApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof APITokensApi
      */
-    public apiTokenValidatePost(requestParameters: APITokensApiApiTokenValidatePostRequest = {}, options?: AxiosRequestConfig) {
+    public apiTokenValidatePost(requestParameters: APITokensApiApiTokenValidatePostRequest = {}, options?: RawAxiosRequestConfig) {
         return APITokensApiFp(this.configuration).apiTokenValidatePost(requestParameters.apiTokenValidatePostRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -3167,7 +3112,7 @@ export const AnnouncementsApiAxiosParamCreator = function (configuration?: Confi
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        announcementCreate: async (announcementPatch?: AnnouncementPatch, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        announcementCreate: async (announcementPatch?: AnnouncementPatch, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/announcements`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -3205,7 +3150,7 @@ export const AnnouncementsApiAxiosParamCreator = function (configuration?: Confi
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        announcementDelete: async (ids: Array<string>, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        announcementDelete: async (ids: Array<string>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'ids' is not null or undefined
             assertParamExists('announcementDelete', 'ids', ids)
             const localVarPath = `/announcements`;
@@ -3246,13 +3191,13 @@ export const AnnouncementsApiAxiosParamCreator = function (configuration?: Confi
          * @param {string} [before] Announcements to fetch before
          * @param {string} [q] Search by category, title etc.
          * @param {string} [publishedAt] Optional filter to retrieve announcements published on or before a specific date and time. If provided, only announcements published on or before the given timestamp will be returned. 
-         * @param {string} [expiresAt] Optional filter to retrieve announcements that are valid until a specific date and time. - If set to a specific timestamp, only announcements that expire on or after the given timestamp will be returned. - If set to &#x60;null&#x60;, only announcements with no expiration date will be returned. 
+         * @param {string | null} [expiresAt] Optional filter to retrieve announcements that are valid until a specific date and time. - If set to a specific timestamp, only announcements that expire on or after the given timestamp will be returned. - If set to &#x60;null&#x60;, only announcements with no expiration date will be returned. 
          * @param {string} [partnership] Search by partnership
          * @param {boolean} [returnTotalCount] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        announcementGet: async (count?: number, before?: string, q?: string, publishedAt?: string, expiresAt?: string, partnership?: string, returnTotalCount?: boolean, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        announcementGet: async (count?: number, before?: string, q?: string, publishedAt?: string, expiresAt?: string | null, partnership?: string, returnTotalCount?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/announcements`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -3320,7 +3265,7 @@ export const AnnouncementsApiAxiosParamCreator = function (configuration?: Confi
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        announcementPatch: async (id: string, announcementPatch?: AnnouncementPatch, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        announcementPatch: async (id: string, announcementPatch?: AnnouncementPatch, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('announcementPatch', 'id', id)
             const localVarPath = `/announcements/{id}`
@@ -3371,9 +3316,11 @@ export const AnnouncementsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async announcementCreate(announcementPatch?: AnnouncementPatch, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AnnouncementMetadata>> {
+        async announcementCreate(announcementPatch?: AnnouncementPatch, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AnnouncementMetadata>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.announcementCreate(announcementPatch, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AnnouncementsApi.announcementCreate']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -3382,9 +3329,11 @@ export const AnnouncementsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async announcementDelete(ids: Array<string>, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async announcementDelete(ids: Array<string>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.announcementDelete(ids, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AnnouncementsApi.announcementDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -3393,15 +3342,17 @@ export const AnnouncementsApiFp = function(configuration?: Configuration) {
          * @param {string} [before] Announcements to fetch before
          * @param {string} [q] Search by category, title etc.
          * @param {string} [publishedAt] Optional filter to retrieve announcements published on or before a specific date and time. If provided, only announcements published on or before the given timestamp will be returned. 
-         * @param {string} [expiresAt] Optional filter to retrieve announcements that are valid until a specific date and time. - If set to a specific timestamp, only announcements that expire on or after the given timestamp will be returned. - If set to &#x60;null&#x60;, only announcements with no expiration date will be returned. 
+         * @param {string | null} [expiresAt] Optional filter to retrieve announcements that are valid until a specific date and time. - If set to a specific timestamp, only announcements that expire on or after the given timestamp will be returned. - If set to &#x60;null&#x60;, only announcements with no expiration date will be returned. 
          * @param {string} [partnership] Search by partnership
          * @param {boolean} [returnTotalCount] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async announcementGet(count?: number, before?: string, q?: string, publishedAt?: string, expiresAt?: string, partnership?: string, returnTotalCount?: boolean, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AnnouncementRetrievalResponse>> {
+        async announcementGet(count?: number, before?: string, q?: string, publishedAt?: string, expiresAt?: string | null, partnership?: string, returnTotalCount?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AnnouncementRetrievalResponse>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.announcementGet(count, before, q, publishedAt, expiresAt, partnership, returnTotalCount, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AnnouncementsApi.announcementGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -3411,9 +3362,11 @@ export const AnnouncementsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async announcementPatch(id: string, announcementPatch?: AnnouncementPatch, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async announcementPatch(id: string, announcementPatch?: AnnouncementPatch, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.announcementPatch(id, announcementPatch, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AnnouncementsApi.announcementPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -3432,7 +3385,7 @@ export const AnnouncementsApiFactory = function (configuration?: Configuration, 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        announcementCreate(requestParameters: AnnouncementsApiAnnouncementCreateRequest = {}, options?: AxiosRequestConfig): AxiosPromise<AnnouncementMetadata> {
+        announcementCreate(requestParameters: AnnouncementsApiAnnouncementCreateRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<AnnouncementMetadata> {
             return localVarFp.announcementCreate(requestParameters.announcementPatch, options).then((request) => request(axios, basePath));
         },
         /**
@@ -3442,7 +3395,7 @@ export const AnnouncementsApiFactory = function (configuration?: Configuration, 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        announcementDelete(requestParameters: AnnouncementsApiAnnouncementDeleteRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        announcementDelete(requestParameters: AnnouncementsApiAnnouncementDeleteRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.announcementDelete(requestParameters.ids, options).then((request) => request(axios, basePath));
         },
         /**
@@ -3452,7 +3405,7 @@ export const AnnouncementsApiFactory = function (configuration?: Configuration, 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        announcementGet(requestParameters: AnnouncementsApiAnnouncementGetRequest = {}, options?: AxiosRequestConfig): AxiosPromise<AnnouncementRetrievalResponse> {
+        announcementGet(requestParameters: AnnouncementsApiAnnouncementGetRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<AnnouncementRetrievalResponse> {
             return localVarFp.announcementGet(requestParameters.count, requestParameters.before, requestParameters.q, requestParameters.publishedAt, requestParameters.expiresAt, requestParameters.partnership, requestParameters.returnTotalCount, options).then((request) => request(axios, basePath));
         },
         /**
@@ -3462,7 +3415,7 @@ export const AnnouncementsApiFactory = function (configuration?: Configuration, 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        announcementPatch(requestParameters: AnnouncementsApiAnnouncementPatchRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        announcementPatch(requestParameters: AnnouncementsApiAnnouncementPatchRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.announcementPatch(requestParameters.id, requestParameters.announcementPatch, options).then((request) => request(axios, basePath));
         },
     };
@@ -3535,7 +3488,7 @@ export interface AnnouncementsApiAnnouncementGetRequest {
      * @type {string}
      * @memberof AnnouncementsApiAnnouncementGet
      */
-    readonly expiresAt?: string
+    readonly expiresAt?: string | null
 
     /**
      * Search by partnership
@@ -3588,7 +3541,7 @@ export class AnnouncementsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AnnouncementsApi
      */
-    public announcementCreate(requestParameters: AnnouncementsApiAnnouncementCreateRequest = {}, options?: AxiosRequestConfig) {
+    public announcementCreate(requestParameters: AnnouncementsApiAnnouncementCreateRequest = {}, options?: RawAxiosRequestConfig) {
         return AnnouncementsApiFp(this.configuration).announcementCreate(requestParameters.announcementPatch, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -3600,7 +3553,7 @@ export class AnnouncementsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AnnouncementsApi
      */
-    public announcementDelete(requestParameters: AnnouncementsApiAnnouncementDeleteRequest, options?: AxiosRequestConfig) {
+    public announcementDelete(requestParameters: AnnouncementsApiAnnouncementDeleteRequest, options?: RawAxiosRequestConfig) {
         return AnnouncementsApiFp(this.configuration).announcementDelete(requestParameters.ids, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -3612,7 +3565,7 @@ export class AnnouncementsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AnnouncementsApi
      */
-    public announcementGet(requestParameters: AnnouncementsApiAnnouncementGetRequest = {}, options?: AxiosRequestConfig) {
+    public announcementGet(requestParameters: AnnouncementsApiAnnouncementGetRequest = {}, options?: RawAxiosRequestConfig) {
         return AnnouncementsApiFp(this.configuration).announcementGet(requestParameters.count, requestParameters.before, requestParameters.q, requestParameters.publishedAt, requestParameters.expiresAt, requestParameters.partnership, requestParameters.returnTotalCount, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -3624,10 +3577,11 @@ export class AnnouncementsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AnnouncementsApi
      */
-    public announcementPatch(requestParameters: AnnouncementsApiAnnouncementPatchRequest, options?: AxiosRequestConfig) {
+    public announcementPatch(requestParameters: AnnouncementsApiAnnouncementPatchRequest, options?: RawAxiosRequestConfig) {
         return AnnouncementsApiFp(this.configuration).announcementPatch(requestParameters.id, requestParameters.announcementPatch, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -3643,7 +3597,7 @@ export const InviteLinksApiAxiosParamCreator = function (configuration?: Configu
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        inviteLinksGet: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        inviteLinksGet: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('inviteLinksGet', 'id', id)
             const localVarPath = `/invite-links/{id}`
@@ -3681,7 +3635,7 @@ export const InviteLinksApiAxiosParamCreator = function (configuration?: Configu
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        inviteLinksPost: async (eitherRoleOrScopes?: EitherRoleOrScopes, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        inviteLinksPost: async (eitherRoleOrScopes?: EitherRoleOrScopes, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/invite-links`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -3729,9 +3683,11 @@ export const InviteLinksApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async inviteLinksGet(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<InviteLink>> {
+        async inviteLinksGet(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<InviteLink>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.inviteLinksGet(id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['InviteLinksApi.inviteLinksGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * To generate an invite link for a specific set of scopes, you must also have the same set of scopes. Eg. you cannot generate a link which gives access to `MESSAGE_SEND` when you don\'t have access to `MESSAGE_SEND` yourself. This is done for obvious security concerns. 
@@ -3740,9 +3696,11 @@ export const InviteLinksApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async inviteLinksPost(eitherRoleOrScopes?: EitherRoleOrScopes, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<InviteLink>> {
+        async inviteLinksPost(eitherRoleOrScopes?: EitherRoleOrScopes, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<InviteLink>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.inviteLinksPost(eitherRoleOrScopes, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['InviteLinksApi.inviteLinksPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -3761,7 +3719,7 @@ export const InviteLinksApiFactory = function (configuration?: Configuration, ba
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        inviteLinksGet(requestParameters: InviteLinksApiInviteLinksGetRequest, options?: AxiosRequestConfig): AxiosPromise<InviteLink> {
+        inviteLinksGet(requestParameters: InviteLinksApiInviteLinksGetRequest, options?: RawAxiosRequestConfig): AxiosPromise<InviteLink> {
             return localVarFp.inviteLinksGet(requestParameters.id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -3771,7 +3729,7 @@ export const InviteLinksApiFactory = function (configuration?: Configuration, ba
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        inviteLinksPost(requestParameters: InviteLinksApiInviteLinksPostRequest = {}, options?: AxiosRequestConfig): AxiosPromise<InviteLink> {
+        inviteLinksPost(requestParameters: InviteLinksApiInviteLinksPostRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<InviteLink> {
             return localVarFp.inviteLinksPost(requestParameters.eitherRoleOrScopes, options).then((request) => request(axios, basePath));
         },
     };
@@ -3820,7 +3778,7 @@ export class InviteLinksApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof InviteLinksApi
      */
-    public inviteLinksGet(requestParameters: InviteLinksApiInviteLinksGetRequest, options?: AxiosRequestConfig) {
+    public inviteLinksGet(requestParameters: InviteLinksApiInviteLinksGetRequest, options?: RawAxiosRequestConfig) {
         return InviteLinksApiFp(this.configuration).inviteLinksGet(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -3832,10 +3790,170 @@ export class InviteLinksApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof InviteLinksApi
      */
-    public inviteLinksPost(requestParameters: InviteLinksApiInviteLinksPostRequest = {}, options?: AxiosRequestConfig) {
+    public inviteLinksPost(requestParameters: InviteLinksApiInviteLinksPostRequest = {}, options?: RawAxiosRequestConfig) {
         return InviteLinksApiFp(this.configuration).inviteLinksPost(requestParameters.eitherRoleOrScopes, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
+
+
+/**
+ * NotificationsApi - axios parameter creator
+ * @export
+ */
+export const NotificationsApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @summary Send a notification to a team member
+         * @param {string} userId 
+         * @param {Array<NotifyTeamMemberDestinationsEnum>} [destinations] The destinations to send the notification to
+         * @param {NotifyRequestWithContent} [notifyRequestWithContent] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        notifyTeamMember: async (userId: string, destinations?: Array<NotifyTeamMemberDestinationsEnum>, notifyRequestWithContent?: NotifyRequestWithContent, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'userId' is not null or undefined
+            assertParamExists('notifyTeamMember', 'userId', userId)
+            const localVarPath = `/notify/{userId}`
+                .replace(`{${"userId"}}`, encodeURIComponent(String(userId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication chatdaddy required
+            // oauth required
+            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", ["MESSAGES_SEND_TO_ALL"], configuration)
+
+            if (destinations) {
+                localVarQueryParameter['destinations'] = destinations;
+            }
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(notifyRequestWithContent, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * NotificationsApi - functional programming interface
+ * @export
+ */
+export const NotificationsApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = NotificationsApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @summary Send a notification to a team member
+         * @param {string} userId 
+         * @param {Array<NotifyTeamMemberDestinationsEnum>} [destinations] The destinations to send the notification to
+         * @param {NotifyRequestWithContent} [notifyRequestWithContent] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async notifyTeamMember(userId: string, destinations?: Array<NotifyTeamMemberDestinationsEnum>, notifyRequestWithContent?: NotifyRequestWithContent, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.notifyTeamMember(userId, destinations, notifyRequestWithContent, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['NotificationsApi.notifyTeamMember']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * NotificationsApi - factory interface
+ * @export
+ */
+export const NotificationsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = NotificationsApiFp(configuration)
+    return {
+        /**
+         * 
+         * @summary Send a notification to a team member
+         * @param {NotificationsApiNotifyTeamMemberRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        notifyTeamMember(requestParameters: NotificationsApiNotifyTeamMemberRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.notifyTeamMember(requestParameters.userId, requestParameters.destinations, requestParameters.notifyRequestWithContent, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * Request parameters for notifyTeamMember operation in NotificationsApi.
+ * @export
+ * @interface NotificationsApiNotifyTeamMemberRequest
+ */
+export interface NotificationsApiNotifyTeamMemberRequest {
+    /**
+     * 
+     * @type {string}
+     * @memberof NotificationsApiNotifyTeamMember
+     */
+    readonly userId: string
+
+    /**
+     * The destinations to send the notification to
+     * @type {Array<'email' | 'push'>}
+     * @memberof NotificationsApiNotifyTeamMember
+     */
+    readonly destinations?: Array<NotifyTeamMemberDestinationsEnum>
+
+    /**
+     * 
+     * @type {NotifyRequestWithContent}
+     * @memberof NotificationsApiNotifyTeamMember
+     */
+    readonly notifyRequestWithContent?: NotifyRequestWithContent
+}
+
+/**
+ * NotificationsApi - object-oriented interface
+ * @export
+ * @class NotificationsApi
+ * @extends {BaseAPI}
+ */
+export class NotificationsApi extends BaseAPI {
+    /**
+     * 
+     * @summary Send a notification to a team member
+     * @param {NotificationsApiNotifyTeamMemberRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof NotificationsApi
+     */
+    public notifyTeamMember(requestParameters: NotificationsApiNotifyTeamMemberRequest, options?: RawAxiosRequestConfig) {
+        return NotificationsApiFp(this.configuration).notifyTeamMember(requestParameters.userId, requestParameters.destinations, requestParameters.notifyRequestWithContent, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+/**
+ * @export
+ */
+export const NotifyTeamMemberDestinationsEnum = {
+    Email: 'email',
+    Push: 'push'
+} as const;
+export type NotifyTeamMemberDestinationsEnum = typeof NotifyTeamMemberDestinationsEnum[keyof typeof NotifyTeamMemberDestinationsEnum];
 
 
 /**
@@ -3851,7 +3969,7 @@ export const OAuthApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tokenDelete: async (token?: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        tokenDelete: async (token?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/token`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -3889,7 +4007,7 @@ export const OAuthApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tokenGet: async (options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        tokenGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/token`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -3924,7 +4042,7 @@ export const OAuthApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tokenPost: async (authRequest?: AuthRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        tokenPost: async (authRequest?: AuthRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/token`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -3958,7 +4076,7 @@ export const OAuthApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tokenPostExternal: async (externalTokenRequest?: ExternalTokenRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        tokenPostExternal: async (externalTokenRequest?: ExternalTokenRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/token/external`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -4002,9 +4120,11 @@ export const OAuthApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async tokenDelete(token?: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async tokenDelete(token?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.tokenDelete(token, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['OAuthApi.tokenDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * Returns in descending order of most recently used
@@ -4012,9 +4132,11 @@ export const OAuthApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async tokenGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<RefreshToken>>> {
+        async tokenGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<RefreshToken>>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.tokenGet(options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['OAuthApi.tokenGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * Generates a new access token, and optionally a refresh token. The refresh token can then be used to generate a new access token when the current one expires.  The token can be generated either via a phone number/password combo or via a refresh token. 
@@ -4023,9 +4145,11 @@ export const OAuthApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async tokenPost(authRequest?: AuthRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TokenPost200Response>> {
+        async tokenPost(authRequest?: AuthRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TokenPost200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.tokenPost(authRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['OAuthApi.tokenPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -4034,9 +4158,11 @@ export const OAuthApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async tokenPostExternal(externalTokenRequest?: ExternalTokenRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ExternalTokenPostResponse>> {
+        async tokenPostExternal(externalTokenRequest?: ExternalTokenRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ExternalTokenPostResponse>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.tokenPostExternal(externalTokenRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['OAuthApi.tokenPostExternal']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -4055,7 +4181,7 @@ export const OAuthApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tokenDelete(requestParameters: OAuthApiTokenDeleteRequest = {}, options?: AxiosRequestConfig): AxiosPromise<void> {
+        tokenDelete(requestParameters: OAuthApiTokenDeleteRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.tokenDelete(requestParameters.token, options).then((request) => request(axios, basePath));
         },
         /**
@@ -4064,7 +4190,7 @@ export const OAuthApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tokenGet(options?: AxiosRequestConfig): AxiosPromise<Array<RefreshToken>> {
+        tokenGet(options?: RawAxiosRequestConfig): AxiosPromise<Array<RefreshToken>> {
             return localVarFp.tokenGet(options).then((request) => request(axios, basePath));
         },
         /**
@@ -4074,7 +4200,7 @@ export const OAuthApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tokenPost(requestParameters: OAuthApiTokenPostRequest = {}, options?: AxiosRequestConfig): AxiosPromise<TokenPost200Response> {
+        tokenPost(requestParameters: OAuthApiTokenPostRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<TokenPost200Response> {
             return localVarFp.tokenPost(requestParameters.authRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -4084,7 +4210,7 @@ export const OAuthApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tokenPostExternal(requestParameters: OAuthApiTokenPostExternalRequest = {}, options?: AxiosRequestConfig): AxiosPromise<ExternalTokenPostResponse> {
+        tokenPostExternal(requestParameters: OAuthApiTokenPostExternalRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<ExternalTokenPostResponse> {
             return localVarFp.tokenPostExternal(requestParameters.externalTokenRequest, options).then((request) => request(axios, basePath));
         },
     };
@@ -4147,7 +4273,7 @@ export class OAuthApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof OAuthApi
      */
-    public tokenDelete(requestParameters: OAuthApiTokenDeleteRequest = {}, options?: AxiosRequestConfig) {
+    public tokenDelete(requestParameters: OAuthApiTokenDeleteRequest = {}, options?: RawAxiosRequestConfig) {
         return OAuthApiFp(this.configuration).tokenDelete(requestParameters.token, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -4158,7 +4284,7 @@ export class OAuthApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof OAuthApi
      */
-    public tokenGet(options?: AxiosRequestConfig) {
+    public tokenGet(options?: RawAxiosRequestConfig) {
         return OAuthApiFp(this.configuration).tokenGet(options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -4170,7 +4296,7 @@ export class OAuthApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof OAuthApi
      */
-    public tokenPost(requestParameters: OAuthApiTokenPostRequest = {}, options?: AxiosRequestConfig) {
+    public tokenPost(requestParameters: OAuthApiTokenPostRequest = {}, options?: RawAxiosRequestConfig) {
         return OAuthApiFp(this.configuration).tokenPost(requestParameters.authRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -4182,10 +4308,11 @@ export class OAuthApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof OAuthApi
      */
-    public tokenPostExternal(requestParameters: OAuthApiTokenPostExternalRequest = {}, options?: AxiosRequestConfig) {
+    public tokenPostExternal(requestParameters: OAuthApiTokenPostExternalRequest = {}, options?: RawAxiosRequestConfig) {
         return OAuthApiFp(this.configuration).tokenPostExternal(requestParameters.externalTokenRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -4195,47 +4322,14 @@ export class OAuthApi extends BaseAPI {
 export const OTPApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * 
-         * @summary Confirm OTP while checkout products.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        confirmOtp: async (options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/verify-otp`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            // authentication otp required
-            await setApiKeyToObject(localVarHeaderParameter, "Authorization", configuration)
-
-
-    
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
          * Generates an OTP for the given phone number. Once generated, the OTP can be used to authenticate the user for specific APIs, i.e. signup & forget password.  A captcha token is required to generate an OTP, available only from the frontend 
          * @summary Generate an OTP
-         * @param {'sms' | 'whatsapp'} [channel] 
+         * @param {OtpPostChannelEnum} [channel] 
          * @param {OtpPostRequest} [otpPostRequest] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        otpPost: async (channel?: 'sms' | 'whatsapp', otpPostRequest?: OtpPostRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        otpPost: async (channel?: OtpPostChannelEnum, otpPostRequest?: OtpPostRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/otp`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -4266,43 +4360,6 @@ export const OTPApiAxiosParamCreator = function (configuration?: Configuration) 
                 options: localVarRequestOptions,
             };
         },
-        /**
-         * 
-         * @summary Generate an OTP token
-         * @param {OtpTokenPostRequest} [otpTokenPostRequest] 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        otpTokenPost: async (otpTokenPostRequest?: OtpTokenPostRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/otp/token`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            // authentication otp required
-            await setApiKeyToObject(localVarHeaderParameter, "Authorization", configuration)
-
-
-    
-            localVarHeaderParameter['Content-Type'] = 'application/json';
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(otpTokenPostRequest, localVarRequestOptions, configuration)
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
     }
 };
 
@@ -4314,37 +4371,18 @@ export const OTPApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = OTPApiAxiosParamCreator(configuration)
     return {
         /**
-         * 
-         * @summary Confirm OTP while checkout products.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async confirmOtp(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ConfirmOtp200Response>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.confirmOtp(options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
-        },
-        /**
          * Generates an OTP for the given phone number. Once generated, the OTP can be used to authenticate the user for specific APIs, i.e. signup & forget password.  A captcha token is required to generate an OTP, available only from the frontend 
          * @summary Generate an OTP
-         * @param {'sms' | 'whatsapp'} [channel] 
+         * @param {OtpPostChannelEnum} [channel] 
          * @param {OtpPostRequest} [otpPostRequest] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async otpPost(channel?: 'sms' | 'whatsapp', otpPostRequest?: OtpPostRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<OTP>> {
+        async otpPost(channel?: OtpPostChannelEnum, otpPostRequest?: OtpPostRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<OTP>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.otpPost(channel, otpPostRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
-        },
-        /**
-         * 
-         * @summary Generate an OTP token
-         * @param {OtpTokenPostRequest} [otpTokenPostRequest] 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async otpTokenPost(otpTokenPostRequest?: OtpTokenPostRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<OtpTokenPost200Response>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.otpTokenPost(otpTokenPostRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['OTPApi.otpPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -4357,33 +4395,14 @@ export const OTPApiFactory = function (configuration?: Configuration, basePath?:
     const localVarFp = OTPApiFp(configuration)
     return {
         /**
-         * 
-         * @summary Confirm OTP while checkout products.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        confirmOtp(options?: AxiosRequestConfig): AxiosPromise<ConfirmOtp200Response> {
-            return localVarFp.confirmOtp(options).then((request) => request(axios, basePath));
-        },
-        /**
          * Generates an OTP for the given phone number. Once generated, the OTP can be used to authenticate the user for specific APIs, i.e. signup & forget password.  A captcha token is required to generate an OTP, available only from the frontend 
          * @summary Generate an OTP
          * @param {OTPApiOtpPostRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        otpPost(requestParameters: OTPApiOtpPostRequest = {}, options?: AxiosRequestConfig): AxiosPromise<OTP> {
+        otpPost(requestParameters: OTPApiOtpPostRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<OTP> {
             return localVarFp.otpPost(requestParameters.channel, requestParameters.otpPostRequest, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * 
-         * @summary Generate an OTP token
-         * @param {OTPApiOtpTokenPostRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        otpTokenPost(requestParameters: OTPApiOtpTokenPostRequest = {}, options?: AxiosRequestConfig): AxiosPromise<OtpTokenPost200Response> {
-            return localVarFp.otpTokenPost(requestParameters.otpTokenPostRequest, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -4396,10 +4415,10 @@ export const OTPApiFactory = function (configuration?: Configuration, basePath?:
 export interface OTPApiOtpPostRequest {
     /**
      * 
-     * @type {'sms' | 'whatsapp'}
+     * @type {'whatsapp'}
      * @memberof OTPApiOtpPost
      */
-    readonly channel?: 'sms' | 'whatsapp'
+    readonly channel?: OtpPostChannelEnum
 
     /**
      * 
@@ -4410,37 +4429,12 @@ export interface OTPApiOtpPostRequest {
 }
 
 /**
- * Request parameters for otpTokenPost operation in OTPApi.
- * @export
- * @interface OTPApiOtpTokenPostRequest
- */
-export interface OTPApiOtpTokenPostRequest {
-    /**
-     * 
-     * @type {OtpTokenPostRequest}
-     * @memberof OTPApiOtpTokenPost
-     */
-    readonly otpTokenPostRequest?: OtpTokenPostRequest
-}
-
-/**
  * OTPApi - object-oriented interface
  * @export
  * @class OTPApi
  * @extends {BaseAPI}
  */
 export class OTPApi extends BaseAPI {
-    /**
-     * 
-     * @summary Confirm OTP while checkout products.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof OTPApi
-     */
-    public confirmOtp(options?: AxiosRequestConfig) {
-        return OTPApiFp(this.configuration).confirmOtp(options).then((request) => request(this.axios, this.basePath));
-    }
-
     /**
      * Generates an OTP for the given phone number. Once generated, the OTP can be used to authenticate the user for specific APIs, i.e. signup & forget password.  A captcha token is required to generate an OTP, available only from the frontend 
      * @summary Generate an OTP
@@ -4449,22 +4443,18 @@ export class OTPApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof OTPApi
      */
-    public otpPost(requestParameters: OTPApiOtpPostRequest = {}, options?: AxiosRequestConfig) {
+    public otpPost(requestParameters: OTPApiOtpPostRequest = {}, options?: RawAxiosRequestConfig) {
         return OTPApiFp(this.configuration).otpPost(requestParameters.channel, requestParameters.otpPostRequest, options).then((request) => request(this.axios, this.basePath));
     }
-
-    /**
-     * 
-     * @summary Generate an OTP token
-     * @param {OTPApiOtpTokenPostRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof OTPApi
-     */
-    public otpTokenPost(requestParameters: OTPApiOtpTokenPostRequest = {}, options?: AxiosRequestConfig) {
-        return OTPApiFp(this.configuration).otpTokenPost(requestParameters.otpTokenPostRequest, options).then((request) => request(this.axios, this.basePath));
-    }
 }
+
+/**
+ * @export
+ */
+export const OtpPostChannelEnum = {
+    Whatsapp: 'whatsapp'
+} as const;
+export type OtpPostChannelEnum = typeof OtpPostChannelEnum[keyof typeof OtpPostChannelEnum];
 
 
 /**
@@ -4480,7 +4470,7 @@ export const PinnedFiltersApiAxiosParamCreator = function (configuration?: Confi
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        inboxFiltersDelete: async (name: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        inboxFiltersDelete: async (name: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'name' is not null or undefined
             assertParamExists('inboxFiltersDelete', 'name', name)
             const localVarPath = `/inbox-filters`;
@@ -4520,7 +4510,7 @@ export const PinnedFiltersApiAxiosParamCreator = function (configuration?: Confi
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        inboxFiltersGet: async (options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        inboxFiltersGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/inbox-filters`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -4555,7 +4545,7 @@ export const PinnedFiltersApiAxiosParamCreator = function (configuration?: Confi
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        inboxFiltersPost: async (inboxFilterData?: InboxFilterData, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        inboxFiltersPost: async (inboxFilterData?: InboxFilterData, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/inbox-filters`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -4594,7 +4584,7 @@ export const PinnedFiltersApiAxiosParamCreator = function (configuration?: Confi
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        inboxFiltersUpdate: async (nameToUpdate: string, inboxFilterName?: InboxFilterName, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        inboxFiltersUpdate: async (nameToUpdate: string, inboxFilterName?: InboxFilterName, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'nameToUpdate' is not null or undefined
             assertParamExists('inboxFiltersUpdate', 'nameToUpdate', nameToUpdate)
             const localVarPath = `/inbox-filters`;
@@ -4648,9 +4638,11 @@ export const PinnedFiltersApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async inboxFiltersDelete(name: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async inboxFiltersDelete(name: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.inboxFiltersDelete(name, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['PinnedFiltersApi.inboxFiltersDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -4658,9 +4650,11 @@ export const PinnedFiltersApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async inboxFiltersGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<InboxFilterData>>> {
+        async inboxFiltersGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<InboxFilterData>>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.inboxFiltersGet(options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['PinnedFiltersApi.inboxFiltersGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -4669,9 +4663,11 @@ export const PinnedFiltersApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async inboxFiltersPost(inboxFilterData?: InboxFilterData, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async inboxFiltersPost(inboxFilterData?: InboxFilterData, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.inboxFiltersPost(inboxFilterData, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['PinnedFiltersApi.inboxFiltersPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -4681,9 +4677,11 @@ export const PinnedFiltersApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async inboxFiltersUpdate(nameToUpdate: string, inboxFilterName?: InboxFilterName, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async inboxFiltersUpdate(nameToUpdate: string, inboxFilterName?: InboxFilterName, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.inboxFiltersUpdate(nameToUpdate, inboxFilterName, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['PinnedFiltersApi.inboxFiltersUpdate']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -4702,7 +4700,7 @@ export const PinnedFiltersApiFactory = function (configuration?: Configuration, 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        inboxFiltersDelete(requestParameters: PinnedFiltersApiInboxFiltersDeleteRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        inboxFiltersDelete(requestParameters: PinnedFiltersApiInboxFiltersDeleteRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.inboxFiltersDelete(requestParameters.name, options).then((request) => request(axios, basePath));
         },
         /**
@@ -4711,7 +4709,7 @@ export const PinnedFiltersApiFactory = function (configuration?: Configuration, 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        inboxFiltersGet(options?: AxiosRequestConfig): AxiosPromise<Array<InboxFilterData>> {
+        inboxFiltersGet(options?: RawAxiosRequestConfig): AxiosPromise<Array<InboxFilterData>> {
             return localVarFp.inboxFiltersGet(options).then((request) => request(axios, basePath));
         },
         /**
@@ -4721,7 +4719,7 @@ export const PinnedFiltersApiFactory = function (configuration?: Configuration, 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        inboxFiltersPost(requestParameters: PinnedFiltersApiInboxFiltersPostRequest = {}, options?: AxiosRequestConfig): AxiosPromise<void> {
+        inboxFiltersPost(requestParameters: PinnedFiltersApiInboxFiltersPostRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.inboxFiltersPost(requestParameters.inboxFilterData, options).then((request) => request(axios, basePath));
         },
         /**
@@ -4731,7 +4729,7 @@ export const PinnedFiltersApiFactory = function (configuration?: Configuration, 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        inboxFiltersUpdate(requestParameters: PinnedFiltersApiInboxFiltersUpdateRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        inboxFiltersUpdate(requestParameters: PinnedFiltersApiInboxFiltersUpdateRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.inboxFiltersUpdate(requestParameters.nameToUpdate, requestParameters.inboxFilterName, options).then((request) => request(axios, basePath));
         },
     };
@@ -4801,7 +4799,7 @@ export class PinnedFiltersApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof PinnedFiltersApi
      */
-    public inboxFiltersDelete(requestParameters: PinnedFiltersApiInboxFiltersDeleteRequest, options?: AxiosRequestConfig) {
+    public inboxFiltersDelete(requestParameters: PinnedFiltersApiInboxFiltersDeleteRequest, options?: RawAxiosRequestConfig) {
         return PinnedFiltersApiFp(this.configuration).inboxFiltersDelete(requestParameters.name, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -4812,7 +4810,7 @@ export class PinnedFiltersApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof PinnedFiltersApi
      */
-    public inboxFiltersGet(options?: AxiosRequestConfig) {
+    public inboxFiltersGet(options?: RawAxiosRequestConfig) {
         return PinnedFiltersApiFp(this.configuration).inboxFiltersGet(options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -4824,7 +4822,7 @@ export class PinnedFiltersApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof PinnedFiltersApi
      */
-    public inboxFiltersPost(requestParameters: PinnedFiltersApiInboxFiltersPostRequest = {}, options?: AxiosRequestConfig) {
+    public inboxFiltersPost(requestParameters: PinnedFiltersApiInboxFiltersPostRequest = {}, options?: RawAxiosRequestConfig) {
         return PinnedFiltersApiFp(this.configuration).inboxFiltersPost(requestParameters.inboxFilterData, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -4836,10 +4834,11 @@ export class PinnedFiltersApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof PinnedFiltersApi
      */
-    public inboxFiltersUpdate(requestParameters: PinnedFiltersApiInboxFiltersUpdateRequest, options?: AxiosRequestConfig) {
+    public inboxFiltersUpdate(requestParameters: PinnedFiltersApiInboxFiltersUpdateRequest, options?: RawAxiosRequestConfig) {
         return PinnedFiltersApiFp(this.configuration).inboxFiltersUpdate(requestParameters.nameToUpdate, requestParameters.inboxFilterName, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -4855,7 +4854,7 @@ export const SubUserApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subUserDelete: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        subUserDelete: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('subUserDelete', 'id', id)
             const localVarPath = `/sub-user/{id}`
@@ -4893,7 +4892,7 @@ export const SubUserApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subUserLogout: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        subUserLogout: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('subUserLogout', 'id', id)
             const localVarPath = `/sub-user/{id}/logout`
@@ -4928,11 +4927,11 @@ export const SubUserApiAxiosParamCreator = function (configuration?: Configurati
          * 
          * @summary Update a sub user
          * @param {string} id 
-         * @param {SubUserPatchRequest} [subUserPatchRequest] 
+         * @param {ResetPassword} [resetPassword] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subUserPatch: async (id: string, subUserPatchRequest?: SubUserPatchRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        subUserPatch: async (id: string, resetPassword?: ResetPassword, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('subUserPatch', 'id', id)
             const localVarPath = `/sub-user/{id}`
@@ -4959,7 +4958,7 @@ export const SubUserApiAxiosParamCreator = function (configuration?: Configurati
             setSearchParams(localVarUrlObj, localVarQueryParameter);
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(subUserPatchRequest, localVarRequestOptions, configuration)
+            localVarRequestOptions.data = serializeDataIfNeeded(resetPassword, localVarRequestOptions, configuration)
 
             return {
                 url: toPathString(localVarUrlObj),
@@ -4973,7 +4972,7 @@ export const SubUserApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subUserPost: async (subUserCreate?: SubUserCreate, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        subUserPost: async (subUserCreate?: SubUserCreate, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/sub-user`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -5021,9 +5020,11 @@ export const SubUserApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async subUserDelete(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async subUserDelete(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.subUserDelete(id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['SubUserApi.subUserDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -5032,21 +5033,25 @@ export const SubUserApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async subUserLogout(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async subUserLogout(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.subUserLogout(id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['SubUserApi.subUserLogout']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
          * @summary Update a sub user
          * @param {string} id 
-         * @param {SubUserPatchRequest} [subUserPatchRequest] 
+         * @param {ResetPassword} [resetPassword] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async subUserPatch(id: string, subUserPatchRequest?: SubUserPatchRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.subUserPatch(id, subUserPatchRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        async subUserPatch(id: string, resetPassword?: ResetPassword, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.subUserPatch(id, resetPassword, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['SubUserApi.subUserPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -5055,9 +5060,11 @@ export const SubUserApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async subUserPost(subUserCreate?: SubUserCreate, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>> {
+        async subUserPost(subUserCreate?: SubUserCreate, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.subUserPost(subUserCreate, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['SubUserApi.subUserPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -5076,7 +5083,7 @@ export const SubUserApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subUserDelete(requestParameters: SubUserApiSubUserDeleteRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        subUserDelete(requestParameters: SubUserApiSubUserDeleteRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.subUserDelete(requestParameters.id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -5086,7 +5093,7 @@ export const SubUserApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subUserLogout(requestParameters: SubUserApiSubUserLogoutRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        subUserLogout(requestParameters: SubUserApiSubUserLogoutRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.subUserLogout(requestParameters.id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -5096,8 +5103,8 @@ export const SubUserApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subUserPatch(requestParameters: SubUserApiSubUserPatchRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
-            return localVarFp.subUserPatch(requestParameters.id, requestParameters.subUserPatchRequest, options).then((request) => request(axios, basePath));
+        subUserPatch(requestParameters: SubUserApiSubUserPatchRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.subUserPatch(requestParameters.id, requestParameters.resetPassword, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -5106,7 +5113,7 @@ export const SubUserApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subUserPost(requestParameters: SubUserApiSubUserPostRequest = {}, options?: AxiosRequestConfig): AxiosPromise<User> {
+        subUserPost(requestParameters: SubUserApiSubUserPostRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<User> {
             return localVarFp.subUserPost(requestParameters.subUserCreate, options).then((request) => request(axios, basePath));
         },
     };
@@ -5155,10 +5162,10 @@ export interface SubUserApiSubUserPatchRequest {
 
     /**
      * 
-     * @type {SubUserPatchRequest}
+     * @type {ResetPassword}
      * @memberof SubUserApiSubUserPatch
      */
-    readonly subUserPatchRequest?: SubUserPatchRequest
+    readonly resetPassword?: ResetPassword
 }
 
 /**
@@ -5190,7 +5197,7 @@ export class SubUserApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof SubUserApi
      */
-    public subUserDelete(requestParameters: SubUserApiSubUserDeleteRequest, options?: AxiosRequestConfig) {
+    public subUserDelete(requestParameters: SubUserApiSubUserDeleteRequest, options?: RawAxiosRequestConfig) {
         return SubUserApiFp(this.configuration).subUserDelete(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -5202,7 +5209,7 @@ export class SubUserApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof SubUserApi
      */
-    public subUserLogout(requestParameters: SubUserApiSubUserLogoutRequest, options?: AxiosRequestConfig) {
+    public subUserLogout(requestParameters: SubUserApiSubUserLogoutRequest, options?: RawAxiosRequestConfig) {
         return SubUserApiFp(this.configuration).subUserLogout(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -5214,8 +5221,8 @@ export class SubUserApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof SubUserApi
      */
-    public subUserPatch(requestParameters: SubUserApiSubUserPatchRequest, options?: AxiosRequestConfig) {
-        return SubUserApiFp(this.configuration).subUserPatch(requestParameters.id, requestParameters.subUserPatchRequest, options).then((request) => request(this.axios, this.basePath));
+    public subUserPatch(requestParameters: SubUserApiSubUserPatchRequest, options?: RawAxiosRequestConfig) {
+        return SubUserApiFp(this.configuration).subUserPatch(requestParameters.id, requestParameters.resetPassword, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -5226,10 +5233,11 @@ export class SubUserApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof SubUserApi
      */
-    public subUserPost(requestParameters: SubUserApiSubUserPostRequest = {}, options?: AxiosRequestConfig) {
+    public subUserPost(requestParameters: SubUserApiSubUserPostRequest = {}, options?: RawAxiosRequestConfig) {
         return SubUserApiFp(this.configuration).subUserPost(requestParameters.subUserCreate, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -5244,7 +5252,7 @@ export const TeamsApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        partnerAdminGet: async (options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        partnerAdminGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/teams/partner-admin`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -5280,7 +5288,7 @@ export const TeamsApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        partnerTeamPatch: async (teamId: string, partnerTeamPatchRequest?: PartnerTeamPatchRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        partnerTeamPatch: async (teamId: string, partnerTeamPatchRequest?: PartnerTeamPatchRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'teamId' is not null or undefined
             assertParamExists('partnerTeamPatch', 'teamId', teamId)
             const localVarPath = `/teams/partner-team-status/{teamId}`
@@ -5321,7 +5329,7 @@ export const TeamsApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        teamsCompletedOnboardingStepPost: async (step: OnboardingStepID, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        teamsCompletedOnboardingStepPost: async (step: OnboardingStepID, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'step' is not null or undefined
             assertParamExists('teamsCompletedOnboardingStepPost', 'step', step)
             const localVarPath = `/teams/completed-onboarding-step/{step}`
@@ -5375,7 +5383,7 @@ export const TeamsApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        teamsGet: async (q?: string, partnership?: string, onboardingScoreMin?: number, onboardingScoreMax?: number, createdAfter?: string, completedSteps?: Array<OnboardingStepID>, id?: Array<string>, userId?: string, count?: number, page?: number, includeTeamMembers?: boolean, includeInviteLinks?: boolean, includeTotal?: boolean, includeCreator?: boolean, partner?: string, returnOnboardingScore?: boolean, isCreditSystemCustomer?: boolean, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        teamsGet: async (q?: string, partnership?: string, onboardingScoreMin?: number, onboardingScoreMax?: number, createdAfter?: string, completedSteps?: Array<OnboardingStepID>, id?: Array<string>, userId?: string, count?: number, page?: number, includeTeamMembers?: boolean, includeInviteLinks?: boolean, includeTotal?: boolean, includeCreator?: boolean, partner?: string, returnOnboardingScore?: boolean, isCreditSystemCustomer?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/teams`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -5480,7 +5488,7 @@ export const TeamsApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        teamsJoinInvite: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        teamsJoinInvite: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('teamsJoinInvite', 'id', id)
             const localVarPath = `/teams/join`;
@@ -5521,7 +5529,7 @@ export const TeamsApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        teamsLeave: async (teamId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        teamsLeave: async (teamId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'teamId' is not null or undefined
             assertParamExists('teamsLeave', 'teamId', teamId)
             const localVarPath = `/teams/leave/{teamId}`
@@ -5559,7 +5567,7 @@ export const TeamsApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        teamsPatch: async (teamPatchRequest?: TeamPatchRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        teamsPatch: async (teamPatchRequest?: TeamPatchRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/teams`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -5606,9 +5614,11 @@ export const TeamsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async partnerAdminGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PartnerAdminGet200Response>> {
+        async partnerAdminGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PartnerAdminGet200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.partnerAdminGet(options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['TeamsApi.partnerAdminGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -5618,9 +5628,11 @@ export const TeamsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async partnerTeamPatch(teamId: string, partnerTeamPatchRequest?: PartnerTeamPatchRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TeamsPatch200Response>> {
+        async partnerTeamPatch(teamId: string, partnerTeamPatchRequest?: PartnerTeamPatchRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TeamsPatch200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.partnerTeamPatch(teamId, partnerTeamPatchRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['TeamsApi.partnerTeamPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -5629,9 +5641,11 @@ export const TeamsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async teamsCompletedOnboardingStepPost(step: OnboardingStepID, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TeamsPatch200Response>> {
+        async teamsCompletedOnboardingStepPost(step: OnboardingStepID, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TeamsPatch200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.teamsCompletedOnboardingStepPost(step, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['TeamsApi.teamsCompletedOnboardingStepPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -5656,9 +5670,11 @@ export const TeamsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async teamsGet(q?: string, partnership?: string, onboardingScoreMin?: number, onboardingScoreMax?: number, createdAfter?: string, completedSteps?: Array<OnboardingStepID>, id?: Array<string>, userId?: string, count?: number, page?: number, includeTeamMembers?: boolean, includeInviteLinks?: boolean, includeTotal?: boolean, includeCreator?: boolean, partner?: string, returnOnboardingScore?: boolean, isCreditSystemCustomer?: boolean, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TeamsGet200Response>> {
+        async teamsGet(q?: string, partnership?: string, onboardingScoreMin?: number, onboardingScoreMax?: number, createdAfter?: string, completedSteps?: Array<OnboardingStepID>, id?: Array<string>, userId?: string, count?: number, page?: number, includeTeamMembers?: boolean, includeInviteLinks?: boolean, includeTotal?: boolean, includeCreator?: boolean, partner?: string, returnOnboardingScore?: boolean, isCreditSystemCustomer?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TeamsGet200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.teamsGet(q, partnership, onboardingScoreMin, onboardingScoreMax, createdAfter, completedSteps, id, userId, count, page, includeTeamMembers, includeInviteLinks, includeTotal, includeCreator, partner, returnOnboardingScore, isCreditSystemCustomer, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['TeamsApi.teamsGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -5667,9 +5683,11 @@ export const TeamsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async teamsJoinInvite(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async teamsJoinInvite(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.teamsJoinInvite(id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['TeamsApi.teamsJoinInvite']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -5678,9 +5696,11 @@ export const TeamsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async teamsLeave(teamId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async teamsLeave(teamId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.teamsLeave(teamId, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['TeamsApi.teamsLeave']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * - If you want to update/delete members -- ensure you have the `TEAMMEMBERS_UPDATE` scope - If you want to delete invite links -- ensure you have the `TEAMLINKS_UPDATE` scope - Also you cannot delete/update yourself in the team. If you attempt to do so, a 400 will be returned - If scopes and role are both specified, scopes will be ignored 
@@ -5689,9 +5709,11 @@ export const TeamsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async teamsPatch(teamPatchRequest?: TeamPatchRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TeamsPatch200Response>> {
+        async teamsPatch(teamPatchRequest?: TeamPatchRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TeamsPatch200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.teamsPatch(teamPatchRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['TeamsApi.teamsPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -5709,7 +5731,7 @@ export const TeamsApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        partnerAdminGet(options?: AxiosRequestConfig): AxiosPromise<PartnerAdminGet200Response> {
+        partnerAdminGet(options?: RawAxiosRequestConfig): AxiosPromise<PartnerAdminGet200Response> {
             return localVarFp.partnerAdminGet(options).then((request) => request(axios, basePath));
         },
         /**
@@ -5719,7 +5741,7 @@ export const TeamsApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        partnerTeamPatch(requestParameters: TeamsApiPartnerTeamPatchRequest, options?: AxiosRequestConfig): AxiosPromise<TeamsPatch200Response> {
+        partnerTeamPatch(requestParameters: TeamsApiPartnerTeamPatchRequest, options?: RawAxiosRequestConfig): AxiosPromise<TeamsPatch200Response> {
             return localVarFp.partnerTeamPatch(requestParameters.teamId, requestParameters.partnerTeamPatchRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -5729,7 +5751,7 @@ export const TeamsApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        teamsCompletedOnboardingStepPost(requestParameters: TeamsApiTeamsCompletedOnboardingStepPostRequest, options?: AxiosRequestConfig): AxiosPromise<TeamsPatch200Response> {
+        teamsCompletedOnboardingStepPost(requestParameters: TeamsApiTeamsCompletedOnboardingStepPostRequest, options?: RawAxiosRequestConfig): AxiosPromise<TeamsPatch200Response> {
             return localVarFp.teamsCompletedOnboardingStepPost(requestParameters.step, options).then((request) => request(axios, basePath));
         },
         /**
@@ -5739,7 +5761,7 @@ export const TeamsApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        teamsGet(requestParameters: TeamsApiTeamsGetRequest = {}, options?: AxiosRequestConfig): AxiosPromise<TeamsGet200Response> {
+        teamsGet(requestParameters: TeamsApiTeamsGetRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<TeamsGet200Response> {
             return localVarFp.teamsGet(requestParameters.q, requestParameters.partnership, requestParameters.onboardingScoreMin, requestParameters.onboardingScoreMax, requestParameters.createdAfter, requestParameters.completedSteps, requestParameters.id, requestParameters.userId, requestParameters.count, requestParameters.page, requestParameters.includeTeamMembers, requestParameters.includeInviteLinks, requestParameters.includeTotal, requestParameters.includeCreator, requestParameters.partner, requestParameters.returnOnboardingScore, requestParameters.isCreditSystemCustomer, options).then((request) => request(axios, basePath));
         },
         /**
@@ -5749,7 +5771,7 @@ export const TeamsApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        teamsJoinInvite(requestParameters: TeamsApiTeamsJoinInviteRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        teamsJoinInvite(requestParameters: TeamsApiTeamsJoinInviteRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.teamsJoinInvite(requestParameters.id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -5759,7 +5781,7 @@ export const TeamsApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        teamsLeave(requestParameters: TeamsApiTeamsLeaveRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        teamsLeave(requestParameters: TeamsApiTeamsLeaveRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.teamsLeave(requestParameters.teamId, options).then((request) => request(axios, basePath));
         },
         /**
@@ -5769,7 +5791,7 @@ export const TeamsApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        teamsPatch(requestParameters: TeamsApiTeamsPatchRequest = {}, options?: AxiosRequestConfig): AxiosPromise<TeamsPatch200Response> {
+        teamsPatch(requestParameters: TeamsApiTeamsPatchRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<TeamsPatch200Response> {
             return localVarFp.teamsPatch(requestParameters.teamPatchRequest, options).then((request) => request(axios, basePath));
         },
     };
@@ -5992,7 +6014,7 @@ export class TeamsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof TeamsApi
      */
-    public partnerAdminGet(options?: AxiosRequestConfig) {
+    public partnerAdminGet(options?: RawAxiosRequestConfig) {
         return TeamsApiFp(this.configuration).partnerAdminGet(options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -6004,7 +6026,7 @@ export class TeamsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof TeamsApi
      */
-    public partnerTeamPatch(requestParameters: TeamsApiPartnerTeamPatchRequest, options?: AxiosRequestConfig) {
+    public partnerTeamPatch(requestParameters: TeamsApiPartnerTeamPatchRequest, options?: RawAxiosRequestConfig) {
         return TeamsApiFp(this.configuration).partnerTeamPatch(requestParameters.teamId, requestParameters.partnerTeamPatchRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -6016,7 +6038,7 @@ export class TeamsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof TeamsApi
      */
-    public teamsCompletedOnboardingStepPost(requestParameters: TeamsApiTeamsCompletedOnboardingStepPostRequest, options?: AxiosRequestConfig) {
+    public teamsCompletedOnboardingStepPost(requestParameters: TeamsApiTeamsCompletedOnboardingStepPostRequest, options?: RawAxiosRequestConfig) {
         return TeamsApiFp(this.configuration).teamsCompletedOnboardingStepPost(requestParameters.step, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -6028,7 +6050,7 @@ export class TeamsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof TeamsApi
      */
-    public teamsGet(requestParameters: TeamsApiTeamsGetRequest = {}, options?: AxiosRequestConfig) {
+    public teamsGet(requestParameters: TeamsApiTeamsGetRequest = {}, options?: RawAxiosRequestConfig) {
         return TeamsApiFp(this.configuration).teamsGet(requestParameters.q, requestParameters.partnership, requestParameters.onboardingScoreMin, requestParameters.onboardingScoreMax, requestParameters.createdAfter, requestParameters.completedSteps, requestParameters.id, requestParameters.userId, requestParameters.count, requestParameters.page, requestParameters.includeTeamMembers, requestParameters.includeInviteLinks, requestParameters.includeTotal, requestParameters.includeCreator, requestParameters.partner, requestParameters.returnOnboardingScore, requestParameters.isCreditSystemCustomer, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -6040,7 +6062,7 @@ export class TeamsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof TeamsApi
      */
-    public teamsJoinInvite(requestParameters: TeamsApiTeamsJoinInviteRequest, options?: AxiosRequestConfig) {
+    public teamsJoinInvite(requestParameters: TeamsApiTeamsJoinInviteRequest, options?: RawAxiosRequestConfig) {
         return TeamsApiFp(this.configuration).teamsJoinInvite(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -6052,7 +6074,7 @@ export class TeamsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof TeamsApi
      */
-    public teamsLeave(requestParameters: TeamsApiTeamsLeaveRequest, options?: AxiosRequestConfig) {
+    public teamsLeave(requestParameters: TeamsApiTeamsLeaveRequest, options?: RawAxiosRequestConfig) {
         return TeamsApiFp(this.configuration).teamsLeave(requestParameters.teamId, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -6064,10 +6086,11 @@ export class TeamsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof TeamsApi
      */
-    public teamsPatch(requestParameters: TeamsApiTeamsPatchRequest = {}, options?: AxiosRequestConfig) {
+    public teamsPatch(requestParameters: TeamsApiTeamsPatchRequest = {}, options?: RawAxiosRequestConfig) {
         return TeamsApiFp(this.configuration).teamsPatch(requestParameters.teamPatchRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -6083,7 +6106,7 @@ export const UsersApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        usersDelete: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        usersDelete: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('usersDelete', 'id', id)
             const localVarPath = `/users`;
@@ -6132,7 +6155,7 @@ export const UsersApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        usersGet: async (q?: string, partnership?: string, id?: Array<string>, originalTeamId?: Array<string>, count?: number, page?: number, includeMemberships?: boolean, includeTotal?: boolean, other?: Array<string>, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        usersGet: async (q?: string, partnership?: string, id?: Array<string>, originalTeamId?: Array<string>, count?: number, page?: number, includeMemberships?: boolean, includeTotal?: boolean, other?: Array<string>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/users`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -6203,7 +6226,7 @@ export const UsersApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        usersPasswordPatch: async (resetPassword?: ResetPassword, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        usersPasswordPatch: async (resetPassword?: ResetPassword, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/users/password`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -6241,7 +6264,7 @@ export const UsersApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        usersPatch: async (userId?: string, userPatch?: UserPatch, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        usersPatch: async (userId?: string, userPatch?: UserPatch, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/users`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -6283,7 +6306,7 @@ export const UsersApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        usersPhoneNumberPatch: async (usersPhoneNumberPatchRequest?: UsersPhoneNumberPatchRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        usersPhoneNumberPatch: async (usersPhoneNumberPatchRequest?: UsersPhoneNumberPatchRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/users/phonenumber`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -6320,7 +6343,7 @@ export const UsersApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        usersPost: async (userCreate?: UserCreate, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        usersPost: async (userCreate?: UserCreate, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/users`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -6371,9 +6394,11 @@ export const UsersApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async usersDelete(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async usersDelete(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.usersDelete(id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['UsersApi.usersDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -6390,9 +6415,11 @@ export const UsersApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async usersGet(q?: string, partnership?: string, id?: Array<string>, originalTeamId?: Array<string>, count?: number, page?: number, includeMemberships?: boolean, includeTotal?: boolean, other?: Array<string>, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<UsersGet200Response>> {
+        async usersGet(q?: string, partnership?: string, id?: Array<string>, originalTeamId?: Array<string>, count?: number, page?: number, includeMemberships?: boolean, includeTotal?: boolean, other?: Array<string>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<UsersGet200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.usersGet(q, partnership, id, originalTeamId, count, page, includeMemberships, includeTotal, other, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['UsersApi.usersGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -6401,9 +6428,11 @@ export const UsersApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async usersPasswordPatch(resetPassword?: ResetPassword, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async usersPasswordPatch(resetPassword?: ResetPassword, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.usersPasswordPatch(resetPassword, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['UsersApi.usersPasswordPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -6413,9 +6442,11 @@ export const UsersApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async usersPatch(userId?: string, userPatch?: UserPatch, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>> {
+        async usersPatch(userId?: string, userPatch?: UserPatch, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.usersPatch(userId, userPatch, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['UsersApi.usersPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -6424,9 +6455,11 @@ export const UsersApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async usersPhoneNumberPatch(usersPhoneNumberPatchRequest?: UsersPhoneNumberPatchRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async usersPhoneNumberPatch(usersPhoneNumberPatchRequest?: UsersPhoneNumberPatchRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.usersPhoneNumberPatch(usersPhoneNumberPatchRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['UsersApi.usersPhoneNumberPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -6435,9 +6468,11 @@ export const UsersApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async usersPost(userCreate?: UserCreate, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>> {
+        async usersPost(userCreate?: UserCreate, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.usersPost(userCreate, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['UsersApi.usersPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -6456,7 +6491,7 @@ export const UsersApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        usersDelete(requestParameters: UsersApiUsersDeleteRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        usersDelete(requestParameters: UsersApiUsersDeleteRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.usersDelete(requestParameters.id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -6466,7 +6501,7 @@ export const UsersApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        usersGet(requestParameters: UsersApiUsersGetRequest = {}, options?: AxiosRequestConfig): AxiosPromise<UsersGet200Response> {
+        usersGet(requestParameters: UsersApiUsersGetRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<UsersGet200Response> {
             return localVarFp.usersGet(requestParameters.q, requestParameters.partnership, requestParameters.id, requestParameters.originalTeamId, requestParameters.count, requestParameters.page, requestParameters.includeMemberships, requestParameters.includeTotal, requestParameters.other, options).then((request) => request(axios, basePath));
         },
         /**
@@ -6476,7 +6511,7 @@ export const UsersApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        usersPasswordPatch(requestParameters: UsersApiUsersPasswordPatchRequest = {}, options?: AxiosRequestConfig): AxiosPromise<void> {
+        usersPasswordPatch(requestParameters: UsersApiUsersPasswordPatchRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.usersPasswordPatch(requestParameters.resetPassword, options).then((request) => request(axios, basePath));
         },
         /**
@@ -6486,7 +6521,7 @@ export const UsersApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        usersPatch(requestParameters: UsersApiUsersPatchRequest = {}, options?: AxiosRequestConfig): AxiosPromise<User> {
+        usersPatch(requestParameters: UsersApiUsersPatchRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<User> {
             return localVarFp.usersPatch(requestParameters.userId, requestParameters.userPatch, options).then((request) => request(axios, basePath));
         },
         /**
@@ -6496,7 +6531,7 @@ export const UsersApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        usersPhoneNumberPatch(requestParameters: UsersApiUsersPhoneNumberPatchRequest = {}, options?: AxiosRequestConfig): AxiosPromise<void> {
+        usersPhoneNumberPatch(requestParameters: UsersApiUsersPhoneNumberPatchRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.usersPhoneNumberPatch(requestParameters.usersPhoneNumberPatchRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -6506,7 +6541,7 @@ export const UsersApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        usersPost(requestParameters: UsersApiUsersPostRequest = {}, options?: AxiosRequestConfig): AxiosPromise<User> {
+        usersPost(requestParameters: UsersApiUsersPostRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<User> {
             return localVarFp.usersPost(requestParameters.userCreate, options).then((request) => request(axios, basePath));
         },
     };
@@ -6674,7 +6709,7 @@ export class UsersApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof UsersApi
      */
-    public usersDelete(requestParameters: UsersApiUsersDeleteRequest, options?: AxiosRequestConfig) {
+    public usersDelete(requestParameters: UsersApiUsersDeleteRequest, options?: RawAxiosRequestConfig) {
         return UsersApiFp(this.configuration).usersDelete(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -6686,7 +6721,7 @@ export class UsersApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof UsersApi
      */
-    public usersGet(requestParameters: UsersApiUsersGetRequest = {}, options?: AxiosRequestConfig) {
+    public usersGet(requestParameters: UsersApiUsersGetRequest = {}, options?: RawAxiosRequestConfig) {
         return UsersApiFp(this.configuration).usersGet(requestParameters.q, requestParameters.partnership, requestParameters.id, requestParameters.originalTeamId, requestParameters.count, requestParameters.page, requestParameters.includeMemberships, requestParameters.includeTotal, requestParameters.other, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -6698,7 +6733,7 @@ export class UsersApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof UsersApi
      */
-    public usersPasswordPatch(requestParameters: UsersApiUsersPasswordPatchRequest = {}, options?: AxiosRequestConfig) {
+    public usersPasswordPatch(requestParameters: UsersApiUsersPasswordPatchRequest = {}, options?: RawAxiosRequestConfig) {
         return UsersApiFp(this.configuration).usersPasswordPatch(requestParameters.resetPassword, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -6710,7 +6745,7 @@ export class UsersApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof UsersApi
      */
-    public usersPatch(requestParameters: UsersApiUsersPatchRequest = {}, options?: AxiosRequestConfig) {
+    public usersPatch(requestParameters: UsersApiUsersPatchRequest = {}, options?: RawAxiosRequestConfig) {
         return UsersApiFp(this.configuration).usersPatch(requestParameters.userId, requestParameters.userPatch, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -6722,7 +6757,7 @@ export class UsersApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof UsersApi
      */
-    public usersPhoneNumberPatch(requestParameters: UsersApiUsersPhoneNumberPatchRequest = {}, options?: AxiosRequestConfig) {
+    public usersPhoneNumberPatch(requestParameters: UsersApiUsersPhoneNumberPatchRequest = {}, options?: RawAxiosRequestConfig) {
         return UsersApiFp(this.configuration).usersPhoneNumberPatch(requestParameters.usersPhoneNumberPatchRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -6734,10 +6769,11 @@ export class UsersApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof UsersApi
      */
-    public usersPost(requestParameters: UsersApiUsersPostRequest = {}, options?: AxiosRequestConfig) {
+    public usersPost(requestParameters: UsersApiUsersPostRequest = {}, options?: RawAxiosRequestConfig) {
         return UsersApiFp(this.configuration).usersPost(requestParameters.userCreate, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -6753,7 +6789,7 @@ export const WidgetConfigApiAxiosParamCreator = function (configuration?: Config
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        widgetGet: async (teamId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        widgetGet: async (teamId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'teamId' is not null or undefined
             assertParamExists('widgetGet', 'teamId', teamId)
             const localVarPath = `/widget/{teamId}`
@@ -6786,7 +6822,7 @@ export const WidgetConfigApiAxiosParamCreator = function (configuration?: Config
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        widgetPatch: async (optionalWidgetConfigParams?: OptionalWidgetConfigParams, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        widgetPatch: async (optionalWidgetConfigParams?: OptionalWidgetConfigParams, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/widget`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -6824,7 +6860,7 @@ export const WidgetConfigApiAxiosParamCreator = function (configuration?: Config
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        widgetPost: async (widgetConfigParams?: WidgetConfigParams, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        widgetPost: async (widgetConfigParams?: WidgetConfigParams, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/widget`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -6872,9 +6908,11 @@ export const WidgetConfigApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async widgetGet(teamId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<WidgetConfig>> {
+        async widgetGet(teamId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<WidgetConfig>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.widgetGet(teamId, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['WidgetConfigApi.widgetGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -6882,9 +6920,11 @@ export const WidgetConfigApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async widgetPatch(optionalWidgetConfigParams?: OptionalWidgetConfigParams, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TeamsPatch200Response>> {
+        async widgetPatch(optionalWidgetConfigParams?: OptionalWidgetConfigParams, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TeamsPatch200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.widgetPatch(optionalWidgetConfigParams, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['WidgetConfigApi.widgetPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -6893,9 +6933,11 @@ export const WidgetConfigApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async widgetPost(widgetConfigParams?: WidgetConfigParams, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<WidgetConfig>> {
+        async widgetPost(widgetConfigParams?: WidgetConfigParams, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<WidgetConfig>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.widgetPost(widgetConfigParams, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['WidgetConfigApi.widgetPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -6914,7 +6956,7 @@ export const WidgetConfigApiFactory = function (configuration?: Configuration, b
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        widgetGet(requestParameters: WidgetConfigApiWidgetGetRequest, options?: AxiosRequestConfig): AxiosPromise<WidgetConfig> {
+        widgetGet(requestParameters: WidgetConfigApiWidgetGetRequest, options?: RawAxiosRequestConfig): AxiosPromise<WidgetConfig> {
             return localVarFp.widgetGet(requestParameters.teamId, options).then((request) => request(axios, basePath));
         },
         /**
@@ -6923,7 +6965,7 @@ export const WidgetConfigApiFactory = function (configuration?: Configuration, b
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        widgetPatch(requestParameters: WidgetConfigApiWidgetPatchRequest = {}, options?: AxiosRequestConfig): AxiosPromise<TeamsPatch200Response> {
+        widgetPatch(requestParameters: WidgetConfigApiWidgetPatchRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<TeamsPatch200Response> {
             return localVarFp.widgetPatch(requestParameters.optionalWidgetConfigParams, options).then((request) => request(axios, basePath));
         },
         /**
@@ -6933,7 +6975,7 @@ export const WidgetConfigApiFactory = function (configuration?: Configuration, b
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        widgetPost(requestParameters: WidgetConfigApiWidgetPostRequest = {}, options?: AxiosRequestConfig): AxiosPromise<WidgetConfig> {
+        widgetPost(requestParameters: WidgetConfigApiWidgetPostRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<WidgetConfig> {
             return localVarFp.widgetPost(requestParameters.widgetConfigParams, options).then((request) => request(axios, basePath));
         },
     };
@@ -6996,7 +7038,7 @@ export class WidgetConfigApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof WidgetConfigApi
      */
-    public widgetGet(requestParameters: WidgetConfigApiWidgetGetRequest, options?: AxiosRequestConfig) {
+    public widgetGet(requestParameters: WidgetConfigApiWidgetGetRequest, options?: RawAxiosRequestConfig) {
         return WidgetConfigApiFp(this.configuration).widgetGet(requestParameters.teamId, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -7007,7 +7049,7 @@ export class WidgetConfigApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof WidgetConfigApi
      */
-    public widgetPatch(requestParameters: WidgetConfigApiWidgetPatchRequest = {}, options?: AxiosRequestConfig) {
+    public widgetPatch(requestParameters: WidgetConfigApiWidgetPatchRequest = {}, options?: RawAxiosRequestConfig) {
         return WidgetConfigApiFp(this.configuration).widgetPatch(requestParameters.optionalWidgetConfigParams, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -7019,9 +7061,10 @@ export class WidgetConfigApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof WidgetConfigApi
      */
-    public widgetPost(requestParameters: WidgetConfigApiWidgetPostRequest = {}, options?: AxiosRequestConfig) {
+    public widgetPost(requestParameters: WidgetConfigApiWidgetPostRequest = {}, options?: RawAxiosRequestConfig) {
         return WidgetConfigApiFp(this.configuration).widgetPost(requestParameters.widgetConfigParams, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 

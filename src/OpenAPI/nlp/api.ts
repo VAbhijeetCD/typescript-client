@@ -16,14 +16,47 @@ const BASE_PATH = "https://api.chatdaddy.tech/nlp".replace(/\/+$/, "");
 
 
 import type { Configuration } from '../configuration';
-import type { AxiosPromise, AxiosInstance, AxiosRequestConfig } from 'axios';
+import type { AxiosPromise, AxiosInstance, RawAxiosRequestConfig } from 'axios';
 import globalAxios from 'axios';
 // Some imports not used depending on template conditions
 // @ts-ignore
 import { DUMMY_BASE_URL, assertParamExists, setApiKeyToObject, setBasicAuthToObject, setBearerAuthToObject, setOAuthToObject, setSearchParams, serializeDataIfNeeded, toPathString, createRequestFunction } from '../common';
 import type { RequestArgs } from '../base';
 // @ts-ignore
-import { COLLECTION_FORMATS, BaseAPI, RequiredError } from '../base';
+import { COLLECTION_FORMATS, BaseAPI, RequiredError, operationServerMap } from '../base';
+
+/**
+ * 
+ * @export
+ * @interface AddSourceFile
+ */
+export interface AddSourceFile {
+    /**
+     * 
+     * @type {string}
+     * @memberof AddSourceFile
+     */
+    'type': AddSourceFileTypeEnum;
+    /**
+     * URL of the file to add
+     * @type {string}
+     * @memberof AddSourceFile
+     */
+    'url': string;
+}
+
+export const AddSourceFileTypeEnum = {
+    Url: 'url',
+    File: 'file'
+} as const;
+
+export type AddSourceFileTypeEnum = typeof AddSourceFileTypeEnum[keyof typeof AddSourceFileTypeEnum];
+
+/**
+ * @type AddSourceRequest
+ * @export
+ */
+export type AddSourceRequest = AddSourceFile;
 
 /**
  * 
@@ -57,10 +90,44 @@ interface AiCreditUse {
     'doneAt': string;
     /**
      * 
-     * @type {object}
+     * @type {AiCreditUseTranscriptionMetadata}
      * @memberof AiCreditUse
      */
-    'metadata'?: object;
+    'transcriptionMetadata'?: AiCreditUseTranscriptionMetadata;
+    /**
+     * 
+     * @type {AiCreditUseMetadata}
+     * @memberof AiCreditUse
+     */
+    'metadata'?: AiCreditUseMetadata;
+}
+/**
+ * 
+ * @export
+ * @interface AiCreditUseMetadata
+ */
+export interface AiCreditUseMetadata {
+    [key: string]: any;
+
+    /**
+     * 
+     * @type {string}
+     * @memberof AiCreditUseMetadata
+     */
+    'uniqueMessageId'?: string;
+}
+/**
+ * 
+ * @export
+ * @interface AiCreditUseTranscriptionMetadata
+ */
+export interface AiCreditUseTranscriptionMetadata {
+    /**
+     * Duration of the transcription in seconds
+     * @type {number}
+     * @memberof AiCreditUseTranscriptionMetadata
+     */
+    'durationS': number;
 }
 /**
  * 
@@ -230,88 +297,9 @@ interface CalendarEvent {
 /**
  * 
  * @export
- * @interface ChatThread
- */
-export interface ChatThread {
-    /**
-     * 
-     * @type {string}
-     * @memberof ChatThread
-     */
-    'id': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof ChatThread
-     */
-    'threadId': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof ChatThread
-     */
-    'accountId': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof ChatThread
-     */
-    'chatId': string;
-    /**
-     * An ISO formatted timestamp
-     * @type {string}
-     * @memberof ChatThread
-     */
-    'createdAt'?: string;
-}
-/**
- * 
- * @export
  * @interface Chatbot
  */
 export interface Chatbot {
-    /**
-     * ID of the chatbot
-     * @type {string}
-     * @memberof Chatbot
-     */
-    'id': string;
-    /**
-     * 
-     * @type {Array<Document>}
-     * @memberof Chatbot
-     */
-    'documents'?: Array<Document>;
-    /**
-     * An ISO formatted timestamp
-     * @type {string}
-     * @memberof Chatbot
-     */
-    'createdAt': string;
-    /**
-     * An ISO formatted timestamp
-     * @type {string}
-     * @memberof Chatbot
-     */
-    'updatedAt': string;
-    /**
-     * Current training status of the chatbot
-     * @type {string}
-     * @memberof Chatbot
-     */
-    'trainingStatus': ChatbotTrainingStatusEnum;
-    /**
-     * Progress of training, between 0 and 100
-     * @type {number}
-     * @memberof Chatbot
-     */
-    'trainingProgress'?: number;
-    /**
-     * 
-     * @type {Array<Job>}
-     * @memberof Chatbot
-     */
-    'jobs'?: Array<Job>;
     /**
      * Name of the chatbot
      * @type {string}
@@ -360,6 +348,48 @@ export interface Chatbot {
      * @memberof Chatbot
      */
     'includeSourceInResponse': boolean;
+    /**
+     * ID of the chatbot
+     * @type {string}
+     * @memberof Chatbot
+     */
+    'id': string;
+    /**
+     * 
+     * @type {Array<Document>}
+     * @memberof Chatbot
+     */
+    'documents'?: Array<Document>;
+    /**
+     * An ISO formatted timestamp
+     * @type {string}
+     * @memberof Chatbot
+     */
+    'createdAt': string;
+    /**
+     * An ISO formatted timestamp
+     * @type {string}
+     * @memberof Chatbot
+     */
+    'updatedAt': string;
+    /**
+     * Current training status of the chatbot
+     * @type {string}
+     * @memberof Chatbot
+     */
+    'trainingStatus': ChatbotTrainingStatusEnum;
+    /**
+     * Progress of training, between 0 and 100
+     * @type {number}
+     * @memberof Chatbot
+     */
+    'trainingProgress'?: number;
+    /**
+     * 
+     * @type {Array<Job>}
+     * @memberof Chatbot
+     */
+    'jobs'?: Array<Job>;
 }
 
 export const ChatbotTrainingStatusEnum = {
@@ -371,66 +401,6 @@ export const ChatbotTrainingStatusEnum = {
 } as const;
 
 export type ChatbotTrainingStatusEnum = typeof ChatbotTrainingStatusEnum[keyof typeof ChatbotTrainingStatusEnum];
-
-/**
- * 
- * @export
- * @interface ChatbotAllOf
- */
-export interface ChatbotAllOf {
-    /**
-     * ID of the chatbot
-     * @type {string}
-     * @memberof ChatbotAllOf
-     */
-    'id': string;
-    /**
-     * 
-     * @type {Array<Document>}
-     * @memberof ChatbotAllOf
-     */
-    'documents'?: Array<Document>;
-    /**
-     * An ISO formatted timestamp
-     * @type {string}
-     * @memberof ChatbotAllOf
-     */
-    'createdAt': string;
-    /**
-     * An ISO formatted timestamp
-     * @type {string}
-     * @memberof ChatbotAllOf
-     */
-    'updatedAt': string;
-    /**
-     * Current training status of the chatbot
-     * @type {string}
-     * @memberof ChatbotAllOf
-     */
-    'trainingStatus': ChatbotAllOfTrainingStatusEnum;
-    /**
-     * Progress of training, between 0 and 100
-     * @type {number}
-     * @memberof ChatbotAllOf
-     */
-    'trainingProgress'?: number;
-    /**
-     * 
-     * @type {Array<Job>}
-     * @memberof ChatbotAllOf
-     */
-    'jobs'?: Array<Job>;
-}
-
-export const ChatbotAllOfTrainingStatusEnum = {
-    Pending: 'pending',
-    Running: 'running',
-    Finished: 'finished',
-    Failed: 'failed',
-    Aborted: 'aborted'
-} as const;
-
-export type ChatbotAllOfTrainingStatusEnum = typeof ChatbotAllOfTrainingStatusEnum[keyof typeof ChatbotAllOfTrainingStatusEnum];
 
 /**
  * 
@@ -508,6 +478,32 @@ export interface CreateChatbotResponse {
      */
     'chatbot': Chatbot;
 }
+/**
+ * Converse via a custom messages
+ * @export
+ * @interface CustomLlmChatInput
+ */
+export interface CustomLlmChatInput {
+    /**
+     * 
+     * @type {string}
+     * @memberof CustomLlmChatInput
+     */
+    'type': CustomLlmChatInputTypeEnum;
+    /**
+     * 
+     * @type {Array<LlmMessage>}
+     * @memberof CustomLlmChatInput
+     */
+    'messages': Array<LlmMessage>;
+}
+
+export const CustomLlmChatInputTypeEnum = {
+    Messages: 'messages'
+} as const;
+
+export type CustomLlmChatInputTypeEnum = typeof CustomLlmChatInputTypeEnum[keyof typeof CustomLlmChatInputTypeEnum];
+
 /**
  * 
  * @export
@@ -649,6 +645,32 @@ export interface GetExecutionRecord200Response {
 /**
  * 
  * @export
+ * @interface GetKnowledgeBases200Response
+ */
+export interface GetKnowledgeBases200Response {
+    /**
+     * 
+     * @type {Array<KnowledgeBase>}
+     * @memberof GetKnowledgeBases200Response
+     */
+    'items': Array<KnowledgeBase>;
+}
+/**
+ * 
+ * @export
+ * @interface GetSources200Response
+ */
+export interface GetSources200Response {
+    /**
+     * 
+     * @type {Array<KnowledgeBaseSource>}
+     * @memberof GetSources200Response
+     */
+    'items': Array<KnowledgeBaseSource>;
+}
+/**
+ * 
+ * @export
  * @interface GetTriggers200Response
  */
 export interface GetTriggers200Response {
@@ -671,6 +693,44 @@ export interface GetTriggers200Response {
      */
     'totalCount'?: number;
 }
+/**
+ * Converse via an existing IM chat. The unique identifier for the thread is simply `accountId/id`
+ * @export
+ * @interface ImLlmChatInput
+ */
+export interface ImLlmChatInput {
+    /**
+     * 
+     * @type {string}
+     * @memberof ImLlmChatInput
+     */
+    'type': ImLlmChatInputTypeEnum;
+    /**
+     * Account ID of the chat
+     * @type {string}
+     * @memberof ImLlmChatInput
+     */
+    'accountId': string;
+    /**
+     * ID of the chat
+     * @type {string}
+     * @memberof ImLlmChatInput
+     */
+    'id': string;
+    /**
+     * If no conversation exists with the bot, instructions to start the conversation
+     * @type {string}
+     * @memberof ImLlmChatInput
+     */
+    'instructions'?: string;
+}
+
+export const ImLlmChatInputTypeEnum = {
+    ImChat: 'im-chat'
+} as const;
+
+export type ImLlmChatInputTypeEnum = typeof ImLlmChatInputTypeEnum[keyof typeof ImLlmChatInputTypeEnum];
+
 /**
  * 
  * @export
@@ -1085,6 +1145,438 @@ export interface KeywordBasedAction {
 /**
  * 
  * @export
+ * @interface KnowledgeBase
+ */
+export interface KnowledgeBase {
+    /**
+     * ID of the knowledge base
+     * @type {string}
+     * @memberof KnowledgeBase
+     */
+    'id': string;
+    /**
+     * Name of the knowledge base
+     * @type {string}
+     * @memberof KnowledgeBase
+     */
+    'name': string;
+    /**
+     * An ISO formatted timestamp
+     * @type {string}
+     * @memberof KnowledgeBase
+     */
+    'createdAt': string;
+    /**
+     * User who created the knowledge base
+     * @type {string}
+     * @memberof KnowledgeBase
+     */
+    'createdBy': string;
+    /**
+     * Size of the knowledge base in bytes
+     * @type {number}
+     * @memberof KnowledgeBase
+     */
+    'storageSizeBytes': number;
+    /**
+     * 
+     * @type {KnowledgeBaseTestConfig}
+     * @memberof KnowledgeBase
+     */
+    'defaultTestConfig'?: KnowledgeBaseTestConfig;
+    /**
+     * 
+     * @type {Array<KnowledgeBaseSource>}
+     * @memberof KnowledgeBase
+     */
+    'sources': Array<KnowledgeBaseSource>;
+}
+/**
+ * 
+ * @export
+ * @interface KnowledgeBaseSource
+ */
+export interface KnowledgeBaseSource {
+    /**
+     * ID of the source
+     * @type {string}
+     * @memberof KnowledgeBaseSource
+     */
+    'id': string;
+    /**
+     * 
+     * @type {KnowledgeBaseSourceData}
+     * @memberof KnowledgeBaseSource
+     */
+    'data': KnowledgeBaseSourceData;
+    /**
+     * An ISO formatted timestamp
+     * @type {string}
+     * @memberof KnowledgeBaseSource
+     */
+    'createdAt': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof KnowledgeBaseSource
+     */
+    'createdBy': string;
+}
+/**
+ * @type KnowledgeBaseSourceData
+ * @export
+ */
+export type KnowledgeBaseSourceData = KnowledgeBaseSourceDataFile;
+
+/**
+ * 
+ * @export
+ * @interface KnowledgeBaseSourceDataFile
+ */
+export interface KnowledgeBaseSourceDataFile {
+    /**
+     * URL of the uploaded file
+     * @type {string}
+     * @memberof KnowledgeBaseSourceDataFile
+     */
+    'url': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof KnowledgeBaseSourceDataFile
+     */
+    'type': KnowledgeBaseSourceDataFileTypeEnum;
+    /**
+     * Size of the knowledge base in bytes
+     * @type {number}
+     * @memberof KnowledgeBaseSourceDataFile
+     */
+    'storageSizeBytes': number;
+    /**
+     * MIME type of the file
+     * @type {string}
+     * @memberof KnowledgeBaseSourceDataFile
+     */
+    'mimetype': string;
+    /**
+     * ID of the file
+     * @type {string}
+     * @memberof KnowledgeBaseSourceDataFile
+     */
+    'fileId': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof KnowledgeBaseSourceDataFile
+     */
+    'filename'?: string;
+}
+
+export const KnowledgeBaseSourceDataFileTypeEnum = {
+    File: 'file',
+    Url: 'url'
+} as const;
+
+export type KnowledgeBaseSourceDataFileTypeEnum = typeof KnowledgeBaseSourceDataFileTypeEnum[keyof typeof KnowledgeBaseSourceDataFileTypeEnum];
+
+/**
+ * 
+ * @export
+ * @interface KnowledgeBaseTestConfig
+ */
+export interface KnowledgeBaseTestConfig {
+    /**
+     * 
+     * @type {LlmModel}
+     * @memberof KnowledgeBaseTestConfig
+     */
+    'model'?: LlmModel;
+    /**
+     * Instructions to start the conversation
+     * @type {string}
+     * @memberof KnowledgeBaseTestConfig
+     */
+    'instructions'?: string;
+}
+
+
+/**
+ * 
+ * @export
+ * @interface LlmChat200Response
+ */
+export interface LlmChat200Response {
+    /**
+     * 
+     * @type {Array<LlmChatOutputItem>}
+     * @memberof LlmChat200Response
+     */
+    'items': Array<LlmChatOutputItem>;
+}
+/**
+ * @type LlmChatInput
+ * @export
+ */
+export type LlmChatInput = CustomLlmChatInput | ImLlmChatInput;
+
+/**
+ * @type LlmChatOutputItem
+ * @export
+ */
+export type LlmChatOutputItem = LlmChatOutputText | LlmChatOutputToolRequest;
+
+/**
+ * Text response from the chatbot
+ * @export
+ * @interface LlmChatOutputText
+ */
+export interface LlmChatOutputText {
+    /**
+     * 
+     * @type {string}
+     * @memberof LlmChatOutputText
+     */
+    'type': LlmChatOutputTextTypeEnum;
+    /**
+     * Text response from the chatbot
+     * @type {string}
+     * @memberof LlmChatOutputText
+     */
+    'text': string;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof LlmChatOutputText
+     */
+    'sources'?: Array<string>;
+}
+
+export const LlmChatOutputTextTypeEnum = {
+    Text: 'text'
+} as const;
+
+export type LlmChatOutputTextTypeEnum = typeof LlmChatOutputTextTypeEnum[keyof typeof LlmChatOutputTextTypeEnum];
+
+/**
+ * Request execution of a tool
+ * @export
+ * @interface LlmChatOutputToolRequest
+ */
+export interface LlmChatOutputToolRequest {
+    /**
+     * 
+     * @type {string}
+     * @memberof LlmChatOutputToolRequest
+     */
+    'type': LlmChatOutputToolRequestTypeEnum;
+    /**
+     * Name of the tool to call
+     * @type {string}
+     * @memberof LlmChatOutputToolRequest
+     */
+    'name': string;
+    /**
+     * ID of the request
+     * @type {string}
+     * @memberof LlmChatOutputToolRequest
+     */
+    'id': string;
+    /**
+     * 
+     * @type {{ [key: string]: any; }}
+     * @memberof LlmChatOutputToolRequest
+     */
+    'params': { [key: string]: any; };
+}
+
+export const LlmChatOutputToolRequestTypeEnum = {
+    Tool: 'tool'
+} as const;
+
+export type LlmChatOutputToolRequestTypeEnum = typeof LlmChatOutputToolRequestTypeEnum[keyof typeof LlmChatOutputToolRequestTypeEnum];
+
+/**
+ * 
+ * @export
+ * @interface LlmChatRequest
+ */
+export interface LlmChatRequest {
+    /**
+     * Thread ID of the conversation
+     * @type {string}
+     * @memberof LlmChatRequest
+     */
+    'id': string;
+    /**
+     * 
+     * @type {LlmChatInput}
+     * @memberof LlmChatRequest
+     */
+    'input': LlmChatInput;
+    /**
+     * 
+     * @type {Array<LlmTool>}
+     * @memberof LlmChatRequest
+     */
+    'tools'?: Array<LlmTool>;
+    /**
+     * 
+     * @type {LlmModel}
+     * @memberof LlmChatRequest
+     */
+    'model'?: LlmModel;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof LlmChatRequest
+     */
+    'knowledgeBaseIds'?: Array<string>;
+    /**
+     * 
+     * @type {number}
+     * @memberof LlmChatRequest
+     */
+    'temperature'?: number;
+    /**
+     * Clear any existing conversation, and start a new one
+     * @type {boolean}
+     * @memberof LlmChatRequest
+     */
+    'clear'?: boolean;
+}
+
+
+/**
+ * @type LlmMessage
+ * @export
+ */
+export type LlmMessage = LlmMessageInput | LlmMessageToolOutput;
+
+/**
+ * 
+ * @export
+ * @interface LlmMessageInput
+ */
+export interface LlmMessageInput {
+    /**
+     * 
+     * @type {string}
+     * @memberof LlmMessageInput
+     */
+    'type': LlmMessageInputTypeEnum;
+    /**
+     * Text to send to the chatbot
+     * @type {string}
+     * @memberof LlmMessageInput
+     */
+    'text'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LlmMessageInput
+     */
+    'imageUrl'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LlmMessageInput
+     */
+    'fileUrl'?: string;
+    /**
+     * Role of the sender
+     * @type {string}
+     * @memberof LlmMessageInput
+     */
+    'role': LlmMessageInputRoleEnum;
+}
+
+export const LlmMessageInputTypeEnum = {
+    Input: 'input'
+} as const;
+
+export type LlmMessageInputTypeEnum = typeof LlmMessageInputTypeEnum[keyof typeof LlmMessageInputTypeEnum];
+export const LlmMessageInputRoleEnum = {
+    User: 'user',
+    System: 'system',
+    Assistant: 'assistant'
+} as const;
+
+export type LlmMessageInputRoleEnum = typeof LlmMessageInputRoleEnum[keyof typeof LlmMessageInputRoleEnum];
+
+/**
+ * 
+ * @export
+ * @interface LlmMessageToolOutput
+ */
+export interface LlmMessageToolOutput {
+    /**
+     * 
+     * @type {string}
+     * @memberof LlmMessageToolOutput
+     */
+    'type': LlmMessageToolOutputTypeEnum;
+    /**
+     * ID of the tool call being responded to
+     * @type {string}
+     * @memberof LlmMessageToolOutput
+     */
+    'id': string;
+    /**
+     * Output of the tool
+     * @type {string}
+     * @memberof LlmMessageToolOutput
+     */
+    'output': string;
+}
+
+export const LlmMessageToolOutputTypeEnum = {
+    ToolOutput: 'tool-output'
+} as const;
+
+export type LlmMessageToolOutputTypeEnum = typeof LlmMessageToolOutputTypeEnum[keyof typeof LlmMessageToolOutputTypeEnum];
+
+/**
+ * 
+ * @export
+ * @enum {string}
+ */
+
+export const LlmModel = {
+    Gpt4oMini: 'gpt-4o-mini',
+    Gpt4o: 'gpt-4o'
+} as const;
+
+export type LlmModel = typeof LlmModel[keyof typeof LlmModel];
+
+
+/**
+ * 
+ * @export
+ * @interface LlmTool
+ */
+export interface LlmTool {
+    /**
+     * Name of the tool, only supports alphanumeric characters
+     * @type {string}
+     * @memberof LlmTool
+     */
+    'name': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LlmTool
+     */
+    'description': string;
+    /**
+     * 
+     * @type {{ [key: string]: any; }}
+     * @memberof LlmTool
+     */
+    'parameters': { [key: string]: any; };
+}
+/**
+ * 
+ * @export
  * @interface OauthCallback200Response
  */
 interface OauthCallback200Response {
@@ -1176,25 +1668,97 @@ export type TrainingStatusResponseStatusEnum = typeof TrainingStatusResponseStat
  */
 export interface TranscribePost200Response {
     /**
-     * The transcription of the audio
+     * 
      * @type {string}
      * @memberof TranscribePost200Response
      */
-    'transcription': string;
+    'id': string;
 }
 /**
  * 
  * @export
- * @interface TranscribePostRequest
+ * @interface TranscriptionJob
  */
-export interface TranscribePostRequest {
+export interface TranscriptionJob {
+    /**
+     * 
+     * @type {string}
+     * @memberof TranscriptionJob
+     */
+    'id': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof TranscriptionJob
+     */
+    'status': TranscriptionJobStatusEnum;
+    /**
+     * An ISO formatted timestamp
+     * @type {string}
+     * @memberof TranscriptionJob
+     */
+    'createdAt': string;
+    /**
+     * An ISO formatted timestamp
+     * @type {string}
+     * @memberof TranscriptionJob
+     */
+    'timesOutAt': string;
+    /**
+     * Transcription of the audio
+     * @type {string}
+     * @memberof TranscriptionJob
+     */
+    'transcription'?: string;
+    /**
+     * Error message if transcription failed
+     * @type {string}
+     * @memberof TranscriptionJob
+     */
+    'error'?: string;
+}
+
+export const TranscriptionJobStatusEnum = {
+    Pending: 'pending',
+    InProgress: 'in-progress',
+    Completed: 'completed',
+    Failed: 'failed'
+} as const;
+
+export type TranscriptionJobStatusEnum = typeof TranscriptionJobStatusEnum[keyof typeof TranscriptionJobStatusEnum];
+
+/**
+ * 
+ * @export
+ * @interface TranscriptionRequest
+ */
+export interface TranscriptionRequest {
+    /**
+     * 
+     * @type {string}
+     * @memberof TranscriptionRequest
+     */
+    'type': TranscriptionRequestTypeEnum;
     /**
      * The URL of the audio to transcribe
      * @type {string}
-     * @memberof TranscribePostRequest
+     * @memberof TranscriptionRequest
      */
-    'audioUrl': string;
+    'url': string;
+    /**
+     * 
+     * @type {AiCreditUseMetadata}
+     * @memberof TranscriptionRequest
+     */
+    'metadata'?: AiCreditUseMetadata;
 }
+
+export const TranscriptionRequestTypeEnum = {
+    Url: 'url'
+} as const;
+
+export type TranscriptionRequestTypeEnum = typeof TranscriptionRequestTypeEnum[keyof typeof TranscriptionRequestTypeEnum];
+
 /**
  * Type of trigger
  * @export
@@ -1331,15 +1895,21 @@ export interface UpdateChatbotRequest {
 /**
  * 
  * @export
- * @interface UpdateChatbotRequestAllOf
+ * @interface UpsertKnowledgeBase
  */
-export interface UpdateChatbotRequestAllOf {
+export interface UpsertKnowledgeBase {
+    /**
+     * Name of the knowledge base
+     * @type {string}
+     * @memberof UpsertKnowledgeBase
+     */
+    'name'?: string;
     /**
      * 
-     * @type {Array<string>}
-     * @memberof UpdateChatbotRequestAllOf
+     * @type {KnowledgeBaseTestConfig}
+     * @memberof UpsertKnowledgeBase
      */
-    'removeDocumentIds'?: Array<string>;
+    'defaultTestConfig'?: KnowledgeBaseTestConfig;
 }
 
 /**
@@ -1349,15 +1919,53 @@ export interface UpdateChatbotRequestAllOf {
 export const AudioTranscriptionApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * Accepts an audio URL and converts it to text using AWS Transcribe. Supports both streaming and batch processing.
-         * @summary Convert audio URL to text
-         * @param {TranscribePostRequest} transcribePostRequest 
+         * Polls the status of a transcription job
+         * @summary Get the status of a transcription job
+         * @param {string} id 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        transcribePost: async (transcribePostRequest: TranscribePostRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'transcribePostRequest' is not null or undefined
-            assertParamExists('transcribePost', 'transcribePostRequest', transcribePostRequest)
+        transcribeGet: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('transcribeGet', 'id', id)
+            const localVarPath = `/transcribe/{id}`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication chatdaddy required
+            // oauth required
+            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", [], configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Accepts an audio URL and converts it to text
+         * @summary Convert audio URL to text
+         * @param {TranscriptionRequest} transcriptionRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        transcribePost: async (transcriptionRequest: TranscriptionRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'transcriptionRequest' is not null or undefined
+            assertParamExists('transcribePost', 'transcriptionRequest', transcriptionRequest)
             const localVarPath = `/transcribe`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -1381,7 +1989,7 @@ export const AudioTranscriptionApiAxiosParamCreator = function (configuration?: 
             setSearchParams(localVarUrlObj, localVarQueryParameter);
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(transcribePostRequest, localVarRequestOptions, configuration)
+            localVarRequestOptions.data = serializeDataIfNeeded(transcriptionRequest, localVarRequestOptions, configuration)
 
             return {
                 url: toPathString(localVarUrlObj),
@@ -1399,15 +2007,30 @@ export const AudioTranscriptionApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = AudioTranscriptionApiAxiosParamCreator(configuration)
     return {
         /**
-         * Accepts an audio URL and converts it to text using AWS Transcribe. Supports both streaming and batch processing.
-         * @summary Convert audio URL to text
-         * @param {TranscribePostRequest} transcribePostRequest 
+         * Polls the status of a transcription job
+         * @summary Get the status of a transcription job
+         * @param {string} id 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async transcribePost(transcribePostRequest: TranscribePostRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TranscribePost200Response>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.transcribePost(transcribePostRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        async transcribeGet(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TranscriptionJob>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.transcribeGet(id, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AudioTranscriptionApi.transcribeGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Accepts an audio URL and converts it to text
+         * @summary Convert audio URL to text
+         * @param {TranscriptionRequest} transcriptionRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async transcribePost(transcriptionRequest: TranscriptionRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TranscribePost200Response>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.transcribePost(transcriptionRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AudioTranscriptionApi.transcribePost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -1420,17 +2043,41 @@ export const AudioTranscriptionApiFactory = function (configuration?: Configurat
     const localVarFp = AudioTranscriptionApiFp(configuration)
     return {
         /**
-         * Accepts an audio URL and converts it to text using AWS Transcribe. Supports both streaming and batch processing.
+         * Polls the status of a transcription job
+         * @summary Get the status of a transcription job
+         * @param {AudioTranscriptionApiTranscribeGetRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        transcribeGet(requestParameters: AudioTranscriptionApiTranscribeGetRequest, options?: RawAxiosRequestConfig): AxiosPromise<TranscriptionJob> {
+            return localVarFp.transcribeGet(requestParameters.id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Accepts an audio URL and converts it to text
          * @summary Convert audio URL to text
          * @param {AudioTranscriptionApiTranscribePostRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        transcribePost(requestParameters: AudioTranscriptionApiTranscribePostRequest, options?: AxiosRequestConfig): AxiosPromise<TranscribePost200Response> {
-            return localVarFp.transcribePost(requestParameters.transcribePostRequest, options).then((request) => request(axios, basePath));
+        transcribePost(requestParameters: AudioTranscriptionApiTranscribePostRequest, options?: RawAxiosRequestConfig): AxiosPromise<TranscribePost200Response> {
+            return localVarFp.transcribePost(requestParameters.transcriptionRequest, options).then((request) => request(axios, basePath));
         },
     };
 };
+
+/**
+ * Request parameters for transcribeGet operation in AudioTranscriptionApi.
+ * @export
+ * @interface AudioTranscriptionApiTranscribeGetRequest
+ */
+export interface AudioTranscriptionApiTranscribeGetRequest {
+    /**
+     * 
+     * @type {string}
+     * @memberof AudioTranscriptionApiTranscribeGet
+     */
+    readonly id: string
+}
 
 /**
  * Request parameters for transcribePost operation in AudioTranscriptionApi.
@@ -1440,10 +2087,10 @@ export const AudioTranscriptionApiFactory = function (configuration?: Configurat
 export interface AudioTranscriptionApiTranscribePostRequest {
     /**
      * 
-     * @type {TranscribePostRequest}
+     * @type {TranscriptionRequest}
      * @memberof AudioTranscriptionApiTranscribePost
      */
-    readonly transcribePostRequest: TranscribePostRequest
+    readonly transcriptionRequest: TranscriptionRequest
 }
 
 /**
@@ -1454,17 +2101,30 @@ export interface AudioTranscriptionApiTranscribePostRequest {
  */
 export class AudioTranscriptionApi extends BaseAPI {
     /**
-     * Accepts an audio URL and converts it to text using AWS Transcribe. Supports both streaming and batch processing.
+     * Polls the status of a transcription job
+     * @summary Get the status of a transcription job
+     * @param {AudioTranscriptionApiTranscribeGetRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof AudioTranscriptionApi
+     */
+    public transcribeGet(requestParameters: AudioTranscriptionApiTranscribeGetRequest, options?: RawAxiosRequestConfig) {
+        return AudioTranscriptionApiFp(this.configuration).transcribeGet(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Accepts an audio URL and converts it to text
      * @summary Convert audio URL to text
      * @param {AudioTranscriptionApiTranscribePostRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof AudioTranscriptionApi
      */
-    public transcribePost(requestParameters: AudioTranscriptionApiTranscribePostRequest, options?: AxiosRequestConfig) {
-        return AudioTranscriptionApiFp(this.configuration).transcribePost(requestParameters.transcribePostRequest, options).then((request) => request(this.axios, this.basePath));
+    public transcribePost(requestParameters: AudioTranscriptionApiTranscribePostRequest, options?: RawAxiosRequestConfig) {
+        return AudioTranscriptionApiFp(this.configuration).transcribePost(requestParameters.transcriptionRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -1480,7 +2140,7 @@ export const AutocompleteApiAxiosParamCreator = function (configuration?: Config
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        autocompleteCalendarEvent: async (autocompleteCalendarEventRequest?: AutocompleteCalendarEventRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        autocompleteCalendarEvent: async (autocompleteCalendarEventRequest?: AutocompleteCalendarEventRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/autocomplete/calendar-event`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -1519,7 +2179,7 @@ export const AutocompleteApiAxiosParamCreator = function (configuration?: Config
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        autocompleteInbox: async (accountId: string, chatId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        autocompleteInbox: async (accountId: string, chatId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('autocompleteInbox', 'accountId', accountId)
             // verify required parameter 'chatId' is not null or undefined
@@ -1561,7 +2221,7 @@ export const AutocompleteApiAxiosParamCreator = function (configuration?: Config
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        autocompleteModify: async (modifier: AutocompleteModifier, autocompleteModifyRequest: AutocompleteModifyRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        autocompleteModify: async (modifier: AutocompleteModifier, autocompleteModifyRequest: AutocompleteModifyRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'modifier' is not null or undefined
             assertParamExists('autocompleteModify', 'modifier', modifier)
             // verify required parameter 'autocompleteModifyRequest' is not null or undefined
@@ -1606,7 +2266,7 @@ export const AutocompleteApiAxiosParamCreator = function (configuration?: Config
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        oauthCallback: async (code: string, state: string, scope?: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        oauthCallback: async (code: string, state: string, scope?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'code' is not null or undefined
             assertParamExists('oauthCallback', 'code', code)
             // verify required parameter 'state' is not null or undefined
@@ -1655,7 +2315,7 @@ export const AutocompleteApiAxiosParamCreator = function (configuration?: Config
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tagSuggest: async (accountId: string, chatId: string, isCustomField?: boolean, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        tagSuggest: async (accountId: string, chatId: string, isCustomField?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('tagSuggest', 'accountId', accountId)
             // verify required parameter 'chatId' is not null or undefined
@@ -1710,9 +2370,11 @@ export const AutocompleteApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async autocompleteCalendarEvent(autocompleteCalendarEventRequest?: AutocompleteCalendarEventRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CalendarEvent>> {
+        async autocompleteCalendarEvent(autocompleteCalendarEventRequest?: AutocompleteCalendarEventRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CalendarEvent>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.autocompleteCalendarEvent(autocompleteCalendarEventRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AutocompleteApi.autocompleteCalendarEvent']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -1722,9 +2384,11 @@ export const AutocompleteApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async autocompleteInbox(accountId: string, chatId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AutocompleteInbox200Response>> {
+        async autocompleteInbox(accountId: string, chatId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AutocompleteInbox200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.autocompleteInbox(accountId, chatId, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AutocompleteApi.autocompleteInbox']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -1734,9 +2398,11 @@ export const AutocompleteApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async autocompleteModify(modifier: AutocompleteModifier, autocompleteModifyRequest: AutocompleteModifyRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AutocompleteModify200Response>> {
+        async autocompleteModify(modifier: AutocompleteModifier, autocompleteModifyRequest: AutocompleteModifyRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AutocompleteModify200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.autocompleteModify(modifier, autocompleteModifyRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AutocompleteApi.autocompleteModify']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -1747,9 +2413,11 @@ export const AutocompleteApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async oauthCallback(code: string, state: string, scope?: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<OauthCallback200Response>> {
+        async oauthCallback(code: string, state: string, scope?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<OauthCallback200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.oauthCallback(code, state, scope, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AutocompleteApi.oauthCallback']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -1760,9 +2428,11 @@ export const AutocompleteApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async tagSuggest(accountId: string, chatId: string, isCustomField?: boolean, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TagSuggest200Response>> {
+        async tagSuggest(accountId: string, chatId: string, isCustomField?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TagSuggest200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.tagSuggest(accountId, chatId, isCustomField, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AutocompleteApi.tagSuggest']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -1781,7 +2451,7 @@ export const AutocompleteApiFactory = function (configuration?: Configuration, b
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        autocompleteCalendarEvent(requestParameters: AutocompleteApiAutocompleteCalendarEventRequest = {}, options?: AxiosRequestConfig): AxiosPromise<CalendarEvent> {
+        autocompleteCalendarEvent(requestParameters: AutocompleteApiAutocompleteCalendarEventRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<CalendarEvent> {
             return localVarFp.autocompleteCalendarEvent(requestParameters.autocompleteCalendarEventRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1791,7 +2461,7 @@ export const AutocompleteApiFactory = function (configuration?: Configuration, b
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        autocompleteInbox(requestParameters: AutocompleteApiAutocompleteInboxRequest, options?: AxiosRequestConfig): AxiosPromise<AutocompleteInbox200Response> {
+        autocompleteInbox(requestParameters: AutocompleteApiAutocompleteInboxRequest, options?: RawAxiosRequestConfig): AxiosPromise<AutocompleteInbox200Response> {
             return localVarFp.autocompleteInbox(requestParameters.accountId, requestParameters.chatId, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1801,7 +2471,7 @@ export const AutocompleteApiFactory = function (configuration?: Configuration, b
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        autocompleteModify(requestParameters: AutocompleteApiAutocompleteModifyRequest, options?: AxiosRequestConfig): AxiosPromise<AutocompleteModify200Response> {
+        autocompleteModify(requestParameters: AutocompleteApiAutocompleteModifyRequest, options?: RawAxiosRequestConfig): AxiosPromise<AutocompleteModify200Response> {
             return localVarFp.autocompleteModify(requestParameters.modifier, requestParameters.autocompleteModifyRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1811,7 +2481,7 @@ export const AutocompleteApiFactory = function (configuration?: Configuration, b
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        oauthCallback(requestParameters: AutocompleteApiOauthCallbackRequest, options?: AxiosRequestConfig): AxiosPromise<OauthCallback200Response> {
+        oauthCallback(requestParameters: AutocompleteApiOauthCallbackRequest, options?: RawAxiosRequestConfig): AxiosPromise<OauthCallback200Response> {
             return localVarFp.oauthCallback(requestParameters.code, requestParameters.state, requestParameters.scope, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1821,7 +2491,7 @@ export const AutocompleteApiFactory = function (configuration?: Configuration, b
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tagSuggest(requestParameters: AutocompleteApiTagSuggestRequest, options?: AxiosRequestConfig): AxiosPromise<TagSuggest200Response> {
+        tagSuggest(requestParameters: AutocompleteApiTagSuggestRequest, options?: RawAxiosRequestConfig): AxiosPromise<TagSuggest200Response> {
             return localVarFp.tagSuggest(requestParameters.accountId, requestParameters.chatId, requestParameters.isCustomField, options).then((request) => request(axios, basePath));
         },
     };
@@ -1954,7 +2624,7 @@ export class AutocompleteApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AutocompleteApi
      */
-    public autocompleteCalendarEvent(requestParameters: AutocompleteApiAutocompleteCalendarEventRequest = {}, options?: AxiosRequestConfig) {
+    public autocompleteCalendarEvent(requestParameters: AutocompleteApiAutocompleteCalendarEventRequest = {}, options?: RawAxiosRequestConfig) {
         return AutocompleteApiFp(this.configuration).autocompleteCalendarEvent(requestParameters.autocompleteCalendarEventRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -1966,7 +2636,7 @@ export class AutocompleteApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AutocompleteApi
      */
-    public autocompleteInbox(requestParameters: AutocompleteApiAutocompleteInboxRequest, options?: AxiosRequestConfig) {
+    public autocompleteInbox(requestParameters: AutocompleteApiAutocompleteInboxRequest, options?: RawAxiosRequestConfig) {
         return AutocompleteApiFp(this.configuration).autocompleteInbox(requestParameters.accountId, requestParameters.chatId, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -1978,7 +2648,7 @@ export class AutocompleteApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AutocompleteApi
      */
-    public autocompleteModify(requestParameters: AutocompleteApiAutocompleteModifyRequest, options?: AxiosRequestConfig) {
+    public autocompleteModify(requestParameters: AutocompleteApiAutocompleteModifyRequest, options?: RawAxiosRequestConfig) {
         return AutocompleteApiFp(this.configuration).autocompleteModify(requestParameters.modifier, requestParameters.autocompleteModifyRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -1990,7 +2660,7 @@ export class AutocompleteApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AutocompleteApi
      */
-    public oauthCallback(requestParameters: AutocompleteApiOauthCallbackRequest, options?: AxiosRequestConfig) {
+    public oauthCallback(requestParameters: AutocompleteApiOauthCallbackRequest, options?: RawAxiosRequestConfig) {
         return AutocompleteApiFp(this.configuration).oauthCallback(requestParameters.code, requestParameters.state, requestParameters.scope, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -2002,10 +2672,11 @@ export class AutocompleteApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AutocompleteApi
      */
-    public tagSuggest(requestParameters: AutocompleteApiTagSuggestRequest, options?: AxiosRequestConfig) {
+    public tagSuggest(requestParameters: AutocompleteApiTagSuggestRequest, options?: RawAxiosRequestConfig) {
         return AutocompleteApiFp(this.configuration).tagSuggest(requestParameters.accountId, requestParameters.chatId, requestParameters.isCustomField, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -2021,7 +2692,7 @@ export const ChatbotApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        chatbotRefresh: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        chatbotRefresh: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('chatbotRefresh', 'id', id)
             const localVarPath = `/chatbot/{id}/refresh`
@@ -2059,7 +2730,7 @@ export const ChatbotApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        createBot: async (body?: object, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        createBot: async (body?: object, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/chatbots`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -2097,7 +2768,7 @@ export const ChatbotApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deleteBot: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        deleteBot: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('deleteBot', 'id', id)
             const localVarPath = `/chatbots/{id}`
@@ -2135,7 +2806,7 @@ export const ChatbotApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getBots: async (id?: Array<string>, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getBots: async (id?: Array<string>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/chatbots`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -2176,7 +2847,7 @@ export const ChatbotApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        jobStart: async (id: string, type: JobType, startJobRequest?: StartJobRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        jobStart: async (id: string, type: JobType, startJobRequest?: StartJobRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('jobStart', 'id', id)
             // verify required parameter 'type' is not null or undefined
@@ -2215,13 +2886,53 @@ export const ChatbotApiAxiosParamCreator = function (configuration?: Configurati
         },
         /**
          * 
+         * @summary Send a message to an LLM
+         * @param {LlmChatRequest} llmChatRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        llmChat: async (llmChatRequest: LlmChatRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'llmChatRequest' is not null or undefined
+            assertParamExists('llmChat', 'llmChatRequest', llmChatRequest)
+            const localVarPath = `/llm-chat`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication chatdaddy required
+            // oauth required
+            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", [], configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(llmChatRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
          * @summary Send message to the chatbot
          * @param {string} id ID of the chatbot
          * @param {ChatbotMessageRequest} [chatbotMessageRequest] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messageBot: async (id: string, chatbotMessageRequest?: ChatbotMessageRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        messageBot: async (id: string, chatbotMessageRequest?: ChatbotMessageRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('messageBot', 'id', id)
             const localVarPath = `/chatbot/{id}/message`
@@ -2262,7 +2973,7 @@ export const ChatbotApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        trainChatbot: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        trainChatbot: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('trainChatbot', 'id', id)
             const localVarPath = `/chatbot/{id}/train`
@@ -2301,7 +3012,7 @@ export const ChatbotApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        updateBot: async (id: string, updateChatbotRequest?: UpdateChatbotRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        updateBot: async (id: string, updateChatbotRequest?: UpdateChatbotRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('updateBot', 'id', id)
             const localVarPath = `/chatbots/{id}`
@@ -2352,9 +3063,11 @@ export const ChatbotApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async chatbotRefresh(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Chatbot>> {
+        async chatbotRefresh(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Chatbot>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.chatbotRefresh(id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ChatbotApi.chatbotRefresh']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -2363,9 +3076,11 @@ export const ChatbotApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async createBot(body?: object, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CreateChatbotResponse>> {
+        async createBot(body?: object, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CreateChatbotResponse>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.createBot(body, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ChatbotApi.createBot']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -2374,9 +3089,11 @@ export const ChatbotApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async deleteBot(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async deleteBot(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.deleteBot(id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ChatbotApi.deleteBot']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -2385,9 +3102,11 @@ export const ChatbotApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getBots(id?: Array<string>, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GetChatbotsResponse>> {
+        async getBots(id?: Array<string>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GetChatbotsResponse>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getBots(id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ChatbotApi.getBots']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -2398,9 +3117,24 @@ export const ChatbotApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async jobStart(id: string, type: JobType, startJobRequest?: StartJobRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<StartJobResponse>> {
+        async jobStart(id: string, type: JobType, startJobRequest?: StartJobRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<StartJobResponse>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.jobStart(id, type, startJobRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ChatbotApi.jobStart']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @summary Send a message to an LLM
+         * @param {LlmChatRequest} llmChatRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async llmChat(llmChatRequest: LlmChatRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LlmChat200Response>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.llmChat(llmChatRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ChatbotApi.llmChat']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -2410,9 +3144,11 @@ export const ChatbotApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async messageBot(id: string, chatbotMessageRequest?: ChatbotMessageRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ChatbotMessageResponse>> {
+        async messageBot(id: string, chatbotMessageRequest?: ChatbotMessageRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ChatbotMessageResponse>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.messageBot(id, chatbotMessageRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ChatbotApi.messageBot']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -2421,9 +3157,11 @@ export const ChatbotApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async trainChatbot(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async trainChatbot(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.trainChatbot(id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ChatbotApi.trainChatbot']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -2433,9 +3171,11 @@ export const ChatbotApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async updateBot(id: string, updateChatbotRequest?: UpdateChatbotRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async updateBot(id: string, updateChatbotRequest?: UpdateChatbotRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.updateBot(id, updateChatbotRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ChatbotApi.updateBot']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -2454,7 +3194,7 @@ export const ChatbotApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        chatbotRefresh(requestParameters: ChatbotApiChatbotRefreshRequest, options?: AxiosRequestConfig): AxiosPromise<Chatbot> {
+        chatbotRefresh(requestParameters: ChatbotApiChatbotRefreshRequest, options?: RawAxiosRequestConfig): AxiosPromise<Chatbot> {
             return localVarFp.chatbotRefresh(requestParameters.id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -2464,7 +3204,7 @@ export const ChatbotApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        createBot(requestParameters: ChatbotApiCreateBotRequest = {}, options?: AxiosRequestConfig): AxiosPromise<CreateChatbotResponse> {
+        createBot(requestParameters: ChatbotApiCreateBotRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<CreateChatbotResponse> {
             return localVarFp.createBot(requestParameters.body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -2474,7 +3214,7 @@ export const ChatbotApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deleteBot(requestParameters: ChatbotApiDeleteBotRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        deleteBot(requestParameters: ChatbotApiDeleteBotRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.deleteBot(requestParameters.id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -2484,7 +3224,7 @@ export const ChatbotApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getBots(requestParameters: ChatbotApiGetBotsRequest = {}, options?: AxiosRequestConfig): AxiosPromise<GetChatbotsResponse> {
+        getBots(requestParameters: ChatbotApiGetBotsRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<GetChatbotsResponse> {
             return localVarFp.getBots(requestParameters.id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -2494,8 +3234,18 @@ export const ChatbotApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        jobStart(requestParameters: ChatbotApiJobStartRequest, options?: AxiosRequestConfig): AxiosPromise<StartJobResponse> {
+        jobStart(requestParameters: ChatbotApiJobStartRequest, options?: RawAxiosRequestConfig): AxiosPromise<StartJobResponse> {
             return localVarFp.jobStart(requestParameters.id, requestParameters.type, requestParameters.startJobRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Send a message to an LLM
+         * @param {ChatbotApiLlmChatRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        llmChat(requestParameters: ChatbotApiLlmChatRequest, options?: RawAxiosRequestConfig): AxiosPromise<LlmChat200Response> {
+            return localVarFp.llmChat(requestParameters.llmChatRequest, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -2504,7 +3254,7 @@ export const ChatbotApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messageBot(requestParameters: ChatbotApiMessageBotRequest, options?: AxiosRequestConfig): AxiosPromise<ChatbotMessageResponse> {
+        messageBot(requestParameters: ChatbotApiMessageBotRequest, options?: RawAxiosRequestConfig): AxiosPromise<ChatbotMessageResponse> {
             return localVarFp.messageBot(requestParameters.id, requestParameters.chatbotMessageRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -2514,7 +3264,7 @@ export const ChatbotApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        trainChatbot(requestParameters: ChatbotApiTrainChatbotRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        trainChatbot(requestParameters: ChatbotApiTrainChatbotRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.trainChatbot(requestParameters.id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -2524,7 +3274,7 @@ export const ChatbotApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        updateBot(requestParameters: ChatbotApiUpdateBotRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        updateBot(requestParameters: ChatbotApiUpdateBotRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.updateBot(requestParameters.id, requestParameters.updateChatbotRequest, options).then((request) => request(axios, basePath));
         },
     };
@@ -2615,6 +3365,20 @@ export interface ChatbotApiJobStartRequest {
 }
 
 /**
+ * Request parameters for llmChat operation in ChatbotApi.
+ * @export
+ * @interface ChatbotApiLlmChatRequest
+ */
+export interface ChatbotApiLlmChatRequest {
+    /**
+     * 
+     * @type {LlmChatRequest}
+     * @memberof ChatbotApiLlmChat
+     */
+    readonly llmChatRequest: LlmChatRequest
+}
+
+/**
  * Request parameters for messageBot operation in ChatbotApi.
  * @export
  * @interface ChatbotApiMessageBotRequest
@@ -2685,7 +3449,7 @@ export class ChatbotApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ChatbotApi
      */
-    public chatbotRefresh(requestParameters: ChatbotApiChatbotRefreshRequest, options?: AxiosRequestConfig) {
+    public chatbotRefresh(requestParameters: ChatbotApiChatbotRefreshRequest, options?: RawAxiosRequestConfig) {
         return ChatbotApiFp(this.configuration).chatbotRefresh(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -2697,7 +3461,7 @@ export class ChatbotApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ChatbotApi
      */
-    public createBot(requestParameters: ChatbotApiCreateBotRequest = {}, options?: AxiosRequestConfig) {
+    public createBot(requestParameters: ChatbotApiCreateBotRequest = {}, options?: RawAxiosRequestConfig) {
         return ChatbotApiFp(this.configuration).createBot(requestParameters.body, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -2709,7 +3473,7 @@ export class ChatbotApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ChatbotApi
      */
-    public deleteBot(requestParameters: ChatbotApiDeleteBotRequest, options?: AxiosRequestConfig) {
+    public deleteBot(requestParameters: ChatbotApiDeleteBotRequest, options?: RawAxiosRequestConfig) {
         return ChatbotApiFp(this.configuration).deleteBot(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -2721,7 +3485,7 @@ export class ChatbotApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ChatbotApi
      */
-    public getBots(requestParameters: ChatbotApiGetBotsRequest = {}, options?: AxiosRequestConfig) {
+    public getBots(requestParameters: ChatbotApiGetBotsRequest = {}, options?: RawAxiosRequestConfig) {
         return ChatbotApiFp(this.configuration).getBots(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -2733,8 +3497,20 @@ export class ChatbotApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ChatbotApi
      */
-    public jobStart(requestParameters: ChatbotApiJobStartRequest, options?: AxiosRequestConfig) {
+    public jobStart(requestParameters: ChatbotApiJobStartRequest, options?: RawAxiosRequestConfig) {
         return ChatbotApiFp(this.configuration).jobStart(requestParameters.id, requestParameters.type, requestParameters.startJobRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Send a message to an LLM
+     * @param {ChatbotApiLlmChatRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ChatbotApi
+     */
+    public llmChat(requestParameters: ChatbotApiLlmChatRequest, options?: RawAxiosRequestConfig) {
+        return ChatbotApiFp(this.configuration).llmChat(requestParameters.llmChatRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -2745,7 +3521,7 @@ export class ChatbotApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ChatbotApi
      */
-    public messageBot(requestParameters: ChatbotApiMessageBotRequest, options?: AxiosRequestConfig) {
+    public messageBot(requestParameters: ChatbotApiMessageBotRequest, options?: RawAxiosRequestConfig) {
         return ChatbotApiFp(this.configuration).messageBot(requestParameters.id, requestParameters.chatbotMessageRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -2757,7 +3533,7 @@ export class ChatbotApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ChatbotApi
      */
-    public trainChatbot(requestParameters: ChatbotApiTrainChatbotRequest, options?: AxiosRequestConfig) {
+    public trainChatbot(requestParameters: ChatbotApiTrainChatbotRequest, options?: RawAxiosRequestConfig) {
         return ChatbotApiFp(this.configuration).trainChatbot(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -2769,10 +3545,11 @@ export class ChatbotApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ChatbotApi
      */
-    public updateBot(requestParameters: ChatbotApiUpdateBotRequest, options?: AxiosRequestConfig) {
+    public updateBot(requestParameters: ChatbotApiUpdateBotRequest, options?: RawAxiosRequestConfig) {
         return ChatbotApiFp(this.configuration).updateBot(requestParameters.id, requestParameters.updateChatbotRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -2788,7 +3565,7 @@ export const KeywordsApiAxiosParamCreator = function (configuration?: Configurat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        createTrigger: async (keywordActionCreateRequestObj: Array<KeywordActionCreateRequestObj>, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        createTrigger: async (keywordActionCreateRequestObj: Array<KeywordActionCreateRequestObj>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'keywordActionCreateRequestObj' is not null or undefined
             assertParamExists('createTrigger', 'keywordActionCreateRequestObj', keywordActionCreateRequestObj)
             const localVarPath = `/`;
@@ -2828,7 +3605,7 @@ export const KeywordsApiAxiosParamCreator = function (configuration?: Configurat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deleteTriggers: async (ids: Array<string>, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        deleteTriggers: async (ids: Array<string>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'ids' is not null or undefined
             assertParamExists('deleteTriggers', 'ids', ids)
             const localVarPath = `/`;
@@ -2869,7 +3646,7 @@ export const KeywordsApiAxiosParamCreator = function (configuration?: Configurat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        editTrigger: async (keywordActionEditRequestObj: Array<KeywordActionEditRequestObj>, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        editTrigger: async (keywordActionEditRequestObj: Array<KeywordActionEditRequestObj>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'keywordActionEditRequestObj' is not null or undefined
             assertParamExists('editTrigger', 'keywordActionEditRequestObj', keywordActionEditRequestObj)
             const localVarPath = `/`;
@@ -2912,7 +3689,7 @@ export const KeywordsApiAxiosParamCreator = function (configuration?: Configurat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getExecutionRecord: async (id: string, count?: number, cursor?: string, returnTotalTriggered?: boolean, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getExecutionRecord: async (id: string, count?: number, cursor?: string, returnTotalTriggered?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('getExecutionRecord', 'id', id)
             const localVarPath = `/log/{id}`
@@ -2967,7 +3744,7 @@ export const KeywordsApiAxiosParamCreator = function (configuration?: Configurat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getTriggers: async (q?: string, count?: number, id?: Array<string>, triggerType?: TriggerType, cursor?: string, returnTotalCount?: boolean, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getTriggers: async (q?: string, count?: number, id?: Array<string>, triggerType?: TriggerType, cursor?: string, returnTotalCount?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -3036,9 +3813,11 @@ export const KeywordsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async createTrigger(keywordActionCreateRequestObj: Array<KeywordActionCreateRequestObj>, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<KeywordBasedAction>>> {
+        async createTrigger(keywordActionCreateRequestObj: Array<KeywordActionCreateRequestObj>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<KeywordBasedAction>>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.createTrigger(keywordActionCreateRequestObj, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['KeywordsApi.createTrigger']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -3047,9 +3826,11 @@ export const KeywordsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async deleteTriggers(ids: Array<string>, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<DeleteTriggers200Response>> {
+        async deleteTriggers(ids: Array<string>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<DeleteTriggers200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.deleteTriggers(ids, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['KeywordsApi.deleteTriggers']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -3058,9 +3839,11 @@ export const KeywordsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async editTrigger(keywordActionEditRequestObj: Array<KeywordActionEditRequestObj>, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<KeywordBasedAction>>> {
+        async editTrigger(keywordActionEditRequestObj: Array<KeywordActionEditRequestObj>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<KeywordBasedAction>>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.editTrigger(keywordActionEditRequestObj, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['KeywordsApi.editTrigger']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -3072,9 +3855,11 @@ export const KeywordsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getExecutionRecord(id: string, count?: number, cursor?: string, returnTotalTriggered?: boolean, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GetExecutionRecord200Response>> {
+        async getExecutionRecord(id: string, count?: number, cursor?: string, returnTotalTriggered?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GetExecutionRecord200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getExecutionRecord(id, count, cursor, returnTotalTriggered, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['KeywordsApi.getExecutionRecord']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -3088,9 +3873,11 @@ export const KeywordsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getTriggers(q?: string, count?: number, id?: Array<string>, triggerType?: TriggerType, cursor?: string, returnTotalCount?: boolean, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GetTriggers200Response>> {
+        async getTriggers(q?: string, count?: number, id?: Array<string>, triggerType?: TriggerType, cursor?: string, returnTotalCount?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GetTriggers200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getTriggers(q, count, id, triggerType, cursor, returnTotalCount, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['KeywordsApi.getTriggers']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -3109,7 +3896,7 @@ export const KeywordsApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        createTrigger(requestParameters: KeywordsApiCreateTriggerRequest, options?: AxiosRequestConfig): AxiosPromise<Array<KeywordBasedAction>> {
+        createTrigger(requestParameters: KeywordsApiCreateTriggerRequest, options?: RawAxiosRequestConfig): AxiosPromise<Array<KeywordBasedAction>> {
             return localVarFp.createTrigger(requestParameters.keywordActionCreateRequestObj, options).then((request) => request(axios, basePath));
         },
         /**
@@ -3119,7 +3906,7 @@ export const KeywordsApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deleteTriggers(requestParameters: KeywordsApiDeleteTriggersRequest, options?: AxiosRequestConfig): AxiosPromise<DeleteTriggers200Response> {
+        deleteTriggers(requestParameters: KeywordsApiDeleteTriggersRequest, options?: RawAxiosRequestConfig): AxiosPromise<DeleteTriggers200Response> {
             return localVarFp.deleteTriggers(requestParameters.ids, options).then((request) => request(axios, basePath));
         },
         /**
@@ -3129,7 +3916,7 @@ export const KeywordsApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        editTrigger(requestParameters: KeywordsApiEditTriggerRequest, options?: AxiosRequestConfig): AxiosPromise<Array<KeywordBasedAction>> {
+        editTrigger(requestParameters: KeywordsApiEditTriggerRequest, options?: RawAxiosRequestConfig): AxiosPromise<Array<KeywordBasedAction>> {
             return localVarFp.editTrigger(requestParameters.keywordActionEditRequestObj, options).then((request) => request(axios, basePath));
         },
         /**
@@ -3139,7 +3926,7 @@ export const KeywordsApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getExecutionRecord(requestParameters: KeywordsApiGetExecutionRecordRequest, options?: AxiosRequestConfig): AxiosPromise<GetExecutionRecord200Response> {
+        getExecutionRecord(requestParameters: KeywordsApiGetExecutionRecordRequest, options?: RawAxiosRequestConfig): AxiosPromise<GetExecutionRecord200Response> {
             return localVarFp.getExecutionRecord(requestParameters.id, requestParameters.count, requestParameters.cursor, requestParameters.returnTotalTriggered, options).then((request) => request(axios, basePath));
         },
         /**
@@ -3149,7 +3936,7 @@ export const KeywordsApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getTriggers(requestParameters: KeywordsApiGetTriggersRequest = {}, options?: AxiosRequestConfig): AxiosPromise<GetTriggers200Response> {
+        getTriggers(requestParameters: KeywordsApiGetTriggersRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<GetTriggers200Response> {
             return localVarFp.getTriggers(requestParameters.q, requestParameters.count, requestParameters.id, requestParameters.triggerType, requestParameters.cursor, requestParameters.returnTotalCount, options).then((request) => request(axios, basePath));
         },
     };
@@ -3296,7 +4083,7 @@ export class KeywordsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof KeywordsApi
      */
-    public createTrigger(requestParameters: KeywordsApiCreateTriggerRequest, options?: AxiosRequestConfig) {
+    public createTrigger(requestParameters: KeywordsApiCreateTriggerRequest, options?: RawAxiosRequestConfig) {
         return KeywordsApiFp(this.configuration).createTrigger(requestParameters.keywordActionCreateRequestObj, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -3308,7 +4095,7 @@ export class KeywordsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof KeywordsApi
      */
-    public deleteTriggers(requestParameters: KeywordsApiDeleteTriggersRequest, options?: AxiosRequestConfig) {
+    public deleteTriggers(requestParameters: KeywordsApiDeleteTriggersRequest, options?: RawAxiosRequestConfig) {
         return KeywordsApiFp(this.configuration).deleteTriggers(requestParameters.ids, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -3320,7 +4107,7 @@ export class KeywordsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof KeywordsApi
      */
-    public editTrigger(requestParameters: KeywordsApiEditTriggerRequest, options?: AxiosRequestConfig) {
+    public editTrigger(requestParameters: KeywordsApiEditTriggerRequest, options?: RawAxiosRequestConfig) {
         return KeywordsApiFp(this.configuration).editTrigger(requestParameters.keywordActionEditRequestObj, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -3332,7 +4119,7 @@ export class KeywordsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof KeywordsApi
      */
-    public getExecutionRecord(requestParameters: KeywordsApiGetExecutionRecordRequest, options?: AxiosRequestConfig) {
+    public getExecutionRecord(requestParameters: KeywordsApiGetExecutionRecordRequest, options?: RawAxiosRequestConfig) {
         return KeywordsApiFp(this.configuration).getExecutionRecord(requestParameters.id, requestParameters.count, requestParameters.cursor, requestParameters.returnTotalTriggered, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -3344,9 +4131,679 @@ export class KeywordsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof KeywordsApi
      */
-    public getTriggers(requestParameters: KeywordsApiGetTriggersRequest = {}, options?: AxiosRequestConfig) {
+    public getTriggers(requestParameters: KeywordsApiGetTriggersRequest = {}, options?: RawAxiosRequestConfig) {
         return KeywordsApiFp(this.configuration).getTriggers(requestParameters.q, requestParameters.count, requestParameters.id, requestParameters.triggerType, requestParameters.cursor, requestParameters.returnTotalCount, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
+
+
+/**
+ * KnowledgebaseApi - axios parameter creator
+ * @export
+ */
+export const KnowledgebaseApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @summary Add a source to the knowledge base
+         * @param {string} id 
+         * @param {AddSourceRequest} addSourceRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        addSource: async (id: string, addSourceRequest: AddSourceRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('addSource', 'id', id)
+            // verify required parameter 'addSourceRequest' is not null or undefined
+            assertParamExists('addSource', 'addSourceRequest', addSourceRequest)
+            const localVarPath = `/knowledge-base/{id}/sources`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication chatdaddy required
+            // oauth required
+            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", ["AUTOCOMPLETE_GET"], configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(addSourceRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary Create a knowledge base
+         * @param {UpsertKnowledgeBase} upsertKnowledgeBase 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createKnowledgeBase: async (upsertKnowledgeBase: UpsertKnowledgeBase, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'upsertKnowledgeBase' is not null or undefined
+            assertParamExists('createKnowledgeBase', 'upsertKnowledgeBase', upsertKnowledgeBase)
+            const localVarPath = `/knowledge-base`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication chatdaddy required
+            // oauth required
+            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", ["AUTOCOMPLETE_GET"], configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(upsertKnowledgeBase, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary Delete a knowledge base
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteKnowledgeBase: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('deleteKnowledgeBase', 'id', id)
+            const localVarPath = `/knowledge-base/{id}`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication chatdaddy required
+            // oauth required
+            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", ["AUTOCOMPLETE_GET"], configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary Delete a source from the knowledge base
+         * @param {string} baseId 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteSource: async (baseId: string, id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'baseId' is not null or undefined
+            assertParamExists('deleteSource', 'baseId', baseId)
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('deleteSource', 'id', id)
+            const localVarPath = `/knowledge-base/{baseId}/sources/{id}`
+                .replace(`{${"baseId"}}`, encodeURIComponent(String(baseId)))
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication chatdaddy required
+            // oauth required
+            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", ["AUTOCOMPLETE_GET"], configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary Get all knowledge bases
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getKnowledgeBases: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/knowledge-base`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication chatdaddy required
+            // oauth required
+            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", ["AUTOCOMPLETE_GET"], configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary Get all sources in a knowledge base
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getSources: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('getSources', 'id', id)
+            const localVarPath = `/knowledge-base/{id}/sources`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication chatdaddy required
+            // oauth required
+            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", ["AUTOCOMPLETE_GET"], configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary Update the name of a knowledge base
+         * @param {string} id 
+         * @param {UpsertKnowledgeBase} upsertKnowledgeBase 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateKnowledgeBase: async (id: string, upsertKnowledgeBase: UpsertKnowledgeBase, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('updateKnowledgeBase', 'id', id)
+            // verify required parameter 'upsertKnowledgeBase' is not null or undefined
+            assertParamExists('updateKnowledgeBase', 'upsertKnowledgeBase', upsertKnowledgeBase)
+            const localVarPath = `/knowledge-base/{id}`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication chatdaddy required
+            // oauth required
+            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", ["AUTOCOMPLETE_GET"], configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(upsertKnowledgeBase, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * KnowledgebaseApi - functional programming interface
+ * @export
+ */
+export const KnowledgebaseApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = KnowledgebaseApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @summary Add a source to the knowledge base
+         * @param {string} id 
+         * @param {AddSourceRequest} addSourceRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async addSource(id: string, addSourceRequest: AddSourceRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<KnowledgeBaseSource>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.addSource(id, addSourceRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['KnowledgebaseApi.addSource']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @summary Create a knowledge base
+         * @param {UpsertKnowledgeBase} upsertKnowledgeBase 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async createKnowledgeBase(upsertKnowledgeBase: UpsertKnowledgeBase, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<KnowledgeBase>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.createKnowledgeBase(upsertKnowledgeBase, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['KnowledgebaseApi.createKnowledgeBase']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @summary Delete a knowledge base
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async deleteKnowledgeBase(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.deleteKnowledgeBase(id, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['KnowledgebaseApi.deleteKnowledgeBase']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @summary Delete a source from the knowledge base
+         * @param {string} baseId 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async deleteSource(baseId: string, id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.deleteSource(baseId, id, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['KnowledgebaseApi.deleteSource']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @summary Get all knowledge bases
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getKnowledgeBases(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GetKnowledgeBases200Response>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getKnowledgeBases(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['KnowledgebaseApi.getKnowledgeBases']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @summary Get all sources in a knowledge base
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getSources(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GetSources200Response>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getSources(id, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['KnowledgebaseApi.getSources']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @summary Update the name of a knowledge base
+         * @param {string} id 
+         * @param {UpsertKnowledgeBase} upsertKnowledgeBase 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async updateKnowledgeBase(id: string, upsertKnowledgeBase: UpsertKnowledgeBase, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateKnowledgeBase(id, upsertKnowledgeBase, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['KnowledgebaseApi.updateKnowledgeBase']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * KnowledgebaseApi - factory interface
+ * @export
+ */
+export const KnowledgebaseApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = KnowledgebaseApiFp(configuration)
+    return {
+        /**
+         * 
+         * @summary Add a source to the knowledge base
+         * @param {KnowledgebaseApiAddSourceRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        addSource(requestParameters: KnowledgebaseApiAddSourceRequest, options?: RawAxiosRequestConfig): AxiosPromise<KnowledgeBaseSource> {
+            return localVarFp.addSource(requestParameters.id, requestParameters.addSourceRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Create a knowledge base
+         * @param {KnowledgebaseApiCreateKnowledgeBaseRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createKnowledgeBase(requestParameters: KnowledgebaseApiCreateKnowledgeBaseRequest, options?: RawAxiosRequestConfig): AxiosPromise<KnowledgeBase> {
+            return localVarFp.createKnowledgeBase(requestParameters.upsertKnowledgeBase, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Delete a knowledge base
+         * @param {KnowledgebaseApiDeleteKnowledgeBaseRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteKnowledgeBase(requestParameters: KnowledgebaseApiDeleteKnowledgeBaseRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.deleteKnowledgeBase(requestParameters.id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Delete a source from the knowledge base
+         * @param {KnowledgebaseApiDeleteSourceRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteSource(requestParameters: KnowledgebaseApiDeleteSourceRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.deleteSource(requestParameters.baseId, requestParameters.id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Get all knowledge bases
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getKnowledgeBases(options?: RawAxiosRequestConfig): AxiosPromise<GetKnowledgeBases200Response> {
+            return localVarFp.getKnowledgeBases(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Get all sources in a knowledge base
+         * @param {KnowledgebaseApiGetSourcesRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getSources(requestParameters: KnowledgebaseApiGetSourcesRequest, options?: RawAxiosRequestConfig): AxiosPromise<GetSources200Response> {
+            return localVarFp.getSources(requestParameters.id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Update the name of a knowledge base
+         * @param {KnowledgebaseApiUpdateKnowledgeBaseRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateKnowledgeBase(requestParameters: KnowledgebaseApiUpdateKnowledgeBaseRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.updateKnowledgeBase(requestParameters.id, requestParameters.upsertKnowledgeBase, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * Request parameters for addSource operation in KnowledgebaseApi.
+ * @export
+ * @interface KnowledgebaseApiAddSourceRequest
+ */
+export interface KnowledgebaseApiAddSourceRequest {
+    /**
+     * 
+     * @type {string}
+     * @memberof KnowledgebaseApiAddSource
+     */
+    readonly id: string
+
+    /**
+     * 
+     * @type {AddSourceRequest}
+     * @memberof KnowledgebaseApiAddSource
+     */
+    readonly addSourceRequest: AddSourceRequest
+}
+
+/**
+ * Request parameters for createKnowledgeBase operation in KnowledgebaseApi.
+ * @export
+ * @interface KnowledgebaseApiCreateKnowledgeBaseRequest
+ */
+export interface KnowledgebaseApiCreateKnowledgeBaseRequest {
+    /**
+     * 
+     * @type {UpsertKnowledgeBase}
+     * @memberof KnowledgebaseApiCreateKnowledgeBase
+     */
+    readonly upsertKnowledgeBase: UpsertKnowledgeBase
+}
+
+/**
+ * Request parameters for deleteKnowledgeBase operation in KnowledgebaseApi.
+ * @export
+ * @interface KnowledgebaseApiDeleteKnowledgeBaseRequest
+ */
+export interface KnowledgebaseApiDeleteKnowledgeBaseRequest {
+    /**
+     * 
+     * @type {string}
+     * @memberof KnowledgebaseApiDeleteKnowledgeBase
+     */
+    readonly id: string
+}
+
+/**
+ * Request parameters for deleteSource operation in KnowledgebaseApi.
+ * @export
+ * @interface KnowledgebaseApiDeleteSourceRequest
+ */
+export interface KnowledgebaseApiDeleteSourceRequest {
+    /**
+     * 
+     * @type {string}
+     * @memberof KnowledgebaseApiDeleteSource
+     */
+    readonly baseId: string
+
+    /**
+     * 
+     * @type {string}
+     * @memberof KnowledgebaseApiDeleteSource
+     */
+    readonly id: string
+}
+
+/**
+ * Request parameters for getSources operation in KnowledgebaseApi.
+ * @export
+ * @interface KnowledgebaseApiGetSourcesRequest
+ */
+export interface KnowledgebaseApiGetSourcesRequest {
+    /**
+     * 
+     * @type {string}
+     * @memberof KnowledgebaseApiGetSources
+     */
+    readonly id: string
+}
+
+/**
+ * Request parameters for updateKnowledgeBase operation in KnowledgebaseApi.
+ * @export
+ * @interface KnowledgebaseApiUpdateKnowledgeBaseRequest
+ */
+export interface KnowledgebaseApiUpdateKnowledgeBaseRequest {
+    /**
+     * 
+     * @type {string}
+     * @memberof KnowledgebaseApiUpdateKnowledgeBase
+     */
+    readonly id: string
+
+    /**
+     * 
+     * @type {UpsertKnowledgeBase}
+     * @memberof KnowledgebaseApiUpdateKnowledgeBase
+     */
+    readonly upsertKnowledgeBase: UpsertKnowledgeBase
+}
+
+/**
+ * KnowledgebaseApi - object-oriented interface
+ * @export
+ * @class KnowledgebaseApi
+ * @extends {BaseAPI}
+ */
+export class KnowledgebaseApi extends BaseAPI {
+    /**
+     * 
+     * @summary Add a source to the knowledge base
+     * @param {KnowledgebaseApiAddSourceRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof KnowledgebaseApi
+     */
+    public addSource(requestParameters: KnowledgebaseApiAddSourceRequest, options?: RawAxiosRequestConfig) {
+        return KnowledgebaseApiFp(this.configuration).addSource(requestParameters.id, requestParameters.addSourceRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Create a knowledge base
+     * @param {KnowledgebaseApiCreateKnowledgeBaseRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof KnowledgebaseApi
+     */
+    public createKnowledgeBase(requestParameters: KnowledgebaseApiCreateKnowledgeBaseRequest, options?: RawAxiosRequestConfig) {
+        return KnowledgebaseApiFp(this.configuration).createKnowledgeBase(requestParameters.upsertKnowledgeBase, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Delete a knowledge base
+     * @param {KnowledgebaseApiDeleteKnowledgeBaseRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof KnowledgebaseApi
+     */
+    public deleteKnowledgeBase(requestParameters: KnowledgebaseApiDeleteKnowledgeBaseRequest, options?: RawAxiosRequestConfig) {
+        return KnowledgebaseApiFp(this.configuration).deleteKnowledgeBase(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Delete a source from the knowledge base
+     * @param {KnowledgebaseApiDeleteSourceRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof KnowledgebaseApi
+     */
+    public deleteSource(requestParameters: KnowledgebaseApiDeleteSourceRequest, options?: RawAxiosRequestConfig) {
+        return KnowledgebaseApiFp(this.configuration).deleteSource(requestParameters.baseId, requestParameters.id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Get all knowledge bases
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof KnowledgebaseApi
+     */
+    public getKnowledgeBases(options?: RawAxiosRequestConfig) {
+        return KnowledgebaseApiFp(this.configuration).getKnowledgeBases(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Get all sources in a knowledge base
+     * @param {KnowledgebaseApiGetSourcesRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof KnowledgebaseApi
+     */
+    public getSources(requestParameters: KnowledgebaseApiGetSourcesRequest, options?: RawAxiosRequestConfig) {
+        return KnowledgebaseApiFp(this.configuration).getSources(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Update the name of a knowledge base
+     * @param {KnowledgebaseApiUpdateKnowledgeBaseRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof KnowledgebaseApi
+     */
+    public updateKnowledgeBase(requestParameters: KnowledgebaseApiUpdateKnowledgeBaseRequest, options?: RawAxiosRequestConfig) {
+        return KnowledgebaseApiFp(this.configuration).updateKnowledgeBase(requestParameters.id, requestParameters.upsertKnowledgeBase, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
 
 

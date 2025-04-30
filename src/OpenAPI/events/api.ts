@@ -16,14 +16,14 @@ const BASE_PATH = "https://api.chatdaddy.tech/events".replace(/\/+$/, "");
 
 
 import type { Configuration } from '../configuration';
-import type { AxiosPromise, AxiosInstance, AxiosRequestConfig } from 'axios';
+import type { AxiosPromise, AxiosInstance, RawAxiosRequestConfig } from 'axios';
 import globalAxios from 'axios';
 // Some imports not used depending on template conditions
 // @ts-ignore
 import { DUMMY_BASE_URL, assertParamExists, setApiKeyToObject, setBasicAuthToObject, setBearerAuthToObject, setOAuthToObject, setSearchParams, serializeDataIfNeeded, toPathString, createRequestFunction } from '../common';
 import type { RequestArgs } from '../base';
 // @ts-ignore
-import { COLLECTION_FORMATS, BaseAPI, RequiredError } from '../base';
+import { COLLECTION_FORMATS, BaseAPI, RequiredError, operationServerMap } from '../base';
 
 /**
  * 
@@ -122,12 +122,6 @@ export interface AccountInsertData {
     'nickname': string;
     /**
      * 
-     * @type {{ [key: string]: any; }}
-     * @memberof AccountInsertData
-     */
-    'credentials'?: { [key: string]: any; } | null;
-    /**
-     * 
      * @type {string}
      * @memberof AccountInsertData
      */
@@ -216,6 +210,12 @@ export interface AccountInsertData {
      * @memberof AccountInsertData
      */
     'settings': AccountInsertDataSettings;
+    /**
+     * 
+     * @type {AccountInsertDataArchiveState}
+     * @memberof AccountInsertData
+     */
+    'archiveState'?: AccountInsertDataArchiveState;
 }
 
 export const AccountInsertDataTierEnum = {
@@ -247,6 +247,65 @@ export type AccountInsertDataStateEnum = typeof AccountInsertDataStateEnum[keyof
 /**
  * 
  * @export
+ * @interface AccountInsertDataArchiveState
+ */
+export interface AccountInsertDataArchiveState {
+    /**
+     * 
+     * @type {string}
+     * @memberof AccountInsertDataArchiveState
+     */
+    'type': AccountInsertDataArchiveStateTypeEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof AccountInsertDataArchiveState
+     */
+    'doneAt': string;
+    /**
+     * 
+     * @type {AccountInsertDataArchiveStateError}
+     * @memberof AccountInsertDataArchiveState
+     */
+    'error'?: AccountInsertDataArchiveStateError;
+}
+
+export const AccountInsertDataArchiveStateTypeEnum = {
+    Archiving: 'archiving',
+    Error: 'error',
+    Done: 'done'
+} as const;
+
+export type AccountInsertDataArchiveStateTypeEnum = typeof AccountInsertDataArchiveStateTypeEnum[keyof typeof AccountInsertDataArchiveStateTypeEnum];
+
+/**
+ * 
+ * @export
+ * @interface AccountInsertDataArchiveStateError
+ */
+export interface AccountInsertDataArchiveStateError {
+    /**
+     * 
+     * @type {number}
+     * @memberof AccountInsertDataArchiveStateError
+     */
+    'statusCode': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof AccountInsertDataArchiveStateError
+     */
+    'message': string;
+    /**
+     * 
+     * @type {AccountInsertDataErrorAllOfData}
+     * @memberof AccountInsertDataArchiveStateError
+     */
+    'data'?: AccountInsertDataErrorAllOfData;
+}
+/**
+ * 
+ * @export
  * @interface AccountInsertDataError
  */
 export interface AccountInsertDataError {
@@ -266,31 +325,6 @@ export interface AccountInsertDataError {
      * 
      * @type {AccountInsertDataErrorAllOfData}
      * @memberof AccountInsertDataError
-     */
-    'data'?: AccountInsertDataErrorAllOfData;
-}
-/**
- * 
- * @export
- * @interface AccountInsertDataErrorAllOf
- */
-export interface AccountInsertDataErrorAllOf {
-    /**
-     * 
-     * @type {number}
-     * @memberof AccountInsertDataErrorAllOf
-     */
-    'statusCode': number;
-    /**
-     * 
-     * @type {string}
-     * @memberof AccountInsertDataErrorAllOf
-     */
-    'message': string;
-    /**
-     * 
-     * @type {AccountInsertDataErrorAllOfData}
-     * @memberof AccountInsertDataErrorAllOf
      */
     'data'?: AccountInsertDataErrorAllOfData;
 }
@@ -381,6 +415,7 @@ export interface AccountInsertDataSettings {
      * 
      * @type {AccountInsertDataSettingsNewChatsAssignee}
      * @memberof AccountInsertDataSettings
+     * @deprecated
      */
     'newChatsAssignee'?: AccountInsertDataSettingsNewChatsAssignee;
     /**
@@ -413,7 +448,47 @@ export interface AccountInsertDataSettings {
      * @memberof AccountInsertDataSettings
      */
     'geoLocation'?: string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof AccountInsertDataSettings
+     */
+    'autoTranscribeVoiceMessages'?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof AccountInsertDataSettings
+     */
+    'autoTranscribeCalls'?: boolean;
+    /**
+     * 
+     * @type {AccountInsertDataSettingsCommentsSilence}
+     * @memberof AccountInsertDataSettings
+     */
+    'commentsSilence'?: AccountInsertDataSettingsCommentsSilence;
 }
+/**
+ * 
+ * @export
+ * @interface AccountInsertDataSettingsCommentsSilence
+ */
+export interface AccountInsertDataSettingsCommentsSilence {
+    /**
+     * 
+     * @type {string}
+     * @memberof AccountInsertDataSettingsCommentsSilence
+     */
+    'category'?: AccountInsertDataSettingsCommentsSilenceCategoryEnum;
+}
+
+export const AccountInsertDataSettingsCommentsSilenceCategoryEnum = {
+    OngoingLive: 'ongoing-live',
+    AllLive: 'all-live',
+    All: 'all'
+} as const;
+
+export type AccountInsertDataSettingsCommentsSilenceCategoryEnum = typeof AccountInsertDataSettingsCommentsSilenceCategoryEnum[keyof typeof AccountInsertDataSettingsCommentsSilenceCategoryEnum];
+
 /**
  * 
  * @export
@@ -543,12 +618,6 @@ export interface AccountUpdateData {
     'nickname'?: string;
     /**
      * 
-     * @type {{ [key: string]: any; }}
-     * @memberof AccountUpdateData
-     */
-    'credentials'?: { [key: string]: any; } | null;
-    /**
-     * 
      * @type {string}
      * @memberof AccountUpdateData
      */
@@ -637,6 +706,12 @@ export interface AccountUpdateData {
      * @memberof AccountUpdateData
      */
     'settings'?: AccountInsertDataSettings;
+    /**
+     * 
+     * @type {AccountInsertDataArchiveState}
+     * @memberof AccountUpdateData
+     */
+    'archiveState'?: AccountInsertDataArchiveState;
 }
 
 export const AccountUpdateDataTierEnum = {
@@ -820,6 +895,45 @@ export interface ActionExecuteDataMessagesInner {
 /**
  * 
  * @export
+ * @interface ActionSchedule
+ */
+export interface ActionSchedule {
+    /**
+     * 
+     * @type {string}
+     * @memberof ActionSchedule
+     */
+    'event': ActionScheduleEventEnum;
+    /**
+     * 
+     * @type {Array<ActionScheduleData>}
+     * @memberof ActionSchedule
+     */
+    'data': Array<ActionScheduleData>;
+}
+
+export const ActionScheduleEventEnum = {
+    ActionSchedule: 'action-schedule'
+} as const;
+
+export type ActionScheduleEventEnum = typeof ActionScheduleEventEnum[keyof typeof ActionScheduleEventEnum];
+
+/**
+ * 
+ * @export
+ * @interface ActionScheduleData
+ */
+export interface ActionScheduleData {
+    /**
+     * ID of the action schedule record
+     * @type {number}
+     * @memberof ActionScheduleData
+     */
+    'id': number;
+}
+/**
+ * 
+ * @export
  * @interface AiCreditUse
  */
 export interface AiCreditUse {
@@ -875,10 +989,44 @@ export interface AiCreditUseData {
     'doneAt': string;
     /**
      * 
-     * @type {object}
+     * @type {AiCreditUseDataTranscriptionMetadata}
      * @memberof AiCreditUseData
      */
-    'metadata'?: object;
+    'transcriptionMetadata'?: AiCreditUseDataTranscriptionMetadata;
+    /**
+     * 
+     * @type {AiCreditUseDataMetadata}
+     * @memberof AiCreditUseData
+     */
+    'metadata'?: AiCreditUseDataMetadata;
+}
+/**
+ * 
+ * @export
+ * @interface AiCreditUseDataMetadata
+ */
+export interface AiCreditUseDataMetadata {
+    [key: string]: any;
+
+    /**
+     * 
+     * @type {string}
+     * @memberof AiCreditUseDataMetadata
+     */
+    'uniqueMessageId'?: string;
+}
+/**
+ * 
+ * @export
+ * @interface AiCreditUseDataTranscriptionMetadata
+ */
+export interface AiCreditUseDataTranscriptionMetadata {
+    /**
+     * Duration of the transcription in seconds
+     * @type {number}
+     * @memberof AiCreditUseDataTranscriptionMetadata
+     */
+    'durationS': number;
 }
 /**
  * 
@@ -923,6 +1071,12 @@ export interface AlarmPostRequest {
      * @memberof AlarmPostRequest
      */
     'parameters'?: { [key: string]: any; };
+    /**
+     * Send alarm to this URL
+     * @type {string}
+     * @memberof AlarmPostRequest
+     */
+    'url'?: string;
     /**
      * 
      * @type {string}
@@ -1192,10 +1346,10 @@ export interface BotInsertDataActionsInner {
     'name': string;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1Message}
+     * @type {BotInsertDataActionsInnerAllOfMessage}
      * @memberof BotInsertDataActionsInner
      */
-    'message'?: BotInsertDataActionsInnerAllOf1Message | null;
+    'message'?: BotInsertDataActionsInnerAllOfMessage | null;
     /**
      * set the assignee on the contact
      * @type {string}
@@ -1204,10 +1358,10 @@ export interface BotInsertDataActionsInner {
     'assignee'?: string | null;
     /**
      * Tags to set on this contact.
-     * @type {Array<BotInsertDataActionsInnerAllOf1TagsInner>}
+     * @type {Array<BotInsertDataActionsInnerAllOfTagsInner>}
      * @memberof BotInsertDataActionsInner
      */
-    'tags'?: Array<BotInsertDataActionsInnerAllOf1TagsInner> | null;
+    'tags'?: Array<BotInsertDataActionsInnerAllOfTagsInner> | null;
     /**
      * Array of UserId
      * @type {Array<string>}
@@ -1223,22 +1377,22 @@ export interface BotInsertDataActionsInner {
     'webhooks'?: Array<string> | null;
     /**
      * 
-     * @type {Array<BotInsertDataActionsInnerAllOf1HttpRequestInner>}
+     * @type {Array<BotInsertDataActionsInnerAllOfHttpRequestInner>}
      * @memberof BotInsertDataActionsInner
      */
-    'httpRequest'?: Array<BotInsertDataActionsInnerAllOf1HttpRequestInner> | null;
+    'httpRequest'?: Array<BotInsertDataActionsInnerAllOfHttpRequestInner> | null;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
      * @memberof BotInsertDataActionsInner
      */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
      * @memberof BotInsertDataActionsInner
      */
-    'actionPosition'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
+    'actionPosition'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
     /**
      * send in to remove the action
      * @type {boolean}
@@ -1247,16 +1401,16 @@ export interface BotInsertDataActionsInner {
     'remove'?: boolean;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1FormRef}
+     * @type {BotInsertDataActionsInnerAllOfFormRef}
      * @memberof BotInsertDataActionsInner
      */
-    'formRef'?: BotInsertDataActionsInnerAllOf1FormRef | null;
+    'formRef'?: BotInsertDataActionsInnerAllOfFormRef | null;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1FormActionMetadata}
+     * @type {BotInsertDataActionsInnerAllOfFormActionMetadata}
      * @memberof BotInsertDataActionsInner
      */
-    'formActionMetadata'?: BotInsertDataActionsInnerAllOf1FormActionMetadata | null;
+    'formActionMetadata'?: BotInsertDataActionsInnerAllOfFormActionMetadata | null;
     /**
      * Type of the message being sent
      * @type {string}
@@ -1271,16 +1425,16 @@ export interface BotInsertDataActionsInner {
     'accountId'?: string;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1ZapierAction}
+     * @type {BotInsertDataActionsInnerAllOfZapierAction}
      * @memberof BotInsertDataActionsInner
      */
-    'zapierAction'?: BotInsertDataActionsInnerAllOf1ZapierAction | null;
+    'zapierAction'?: BotInsertDataActionsInnerAllOfZapierAction | null;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1App}
+     * @type {BotInsertDataActionsInnerAllOfApp}
      * @memberof BotInsertDataActionsInner
      */
-    'app'?: BotInsertDataActionsInnerAllOf1App;
+    'app'?: BotInsertDataActionsInnerAllOfApp;
 }
 
 export const BotInsertDataActionsInnerMessageTypeEnum = {
@@ -1293,1431 +1447,33 @@ export type BotInsertDataActionsInnerMessageTypeEnum = typeof BotInsertDataActio
 /**
  * 
  * @export
- * @interface BotInsertDataActionsInnerAllOf
+ * @interface BotInsertDataActionsInnerAllOfApp
  */
-export interface BotInsertDataActionsInnerAllOf {
+export interface BotInsertDataActionsInnerAllOfApp {
     /**
      * 
      * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf
-     */
-    'botId': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf
-     */
-    'createdAt': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf
-     */
-    'updatedAt': string;
-    /**
-     * Map from channel to external template provider status. Channel is the key and the value is the status of the template on the provider.
-     * @type {{ [key: string]: BotInsertDataActionsInnerAllOfExternalTemplateValue; }}
-     * @memberof BotInsertDataActionsInnerAllOf
-     */
-    'externalTemplate'?: { [key: string]: BotInsertDataActionsInnerAllOfExternalTemplateValue; };
-}
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1
- */
-export interface BotInsertDataActionsInnerAllOf1 {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1
-     */
-    'id'?: string;
-    /**
-     * Name of the template
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1
-     */
-    'name'?: string;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1Message}
-     * @memberof BotInsertDataActionsInnerAllOf1
-     */
-    'message'?: BotInsertDataActionsInnerAllOf1Message | null;
-    /**
-     * set the assignee on the contact
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1
-     */
-    'assignee'?: string | null;
-    /**
-     * Tags to set on this contact.
-     * @type {Array<BotInsertDataActionsInnerAllOf1TagsInner>}
-     * @memberof BotInsertDataActionsInnerAllOf1
-     */
-    'tags'?: Array<BotInsertDataActionsInnerAllOf1TagsInner> | null;
-    /**
-     * Array of UserId
-     * @type {Array<string>}
-     * @memberof BotInsertDataActionsInnerAllOf1
-     */
-    'notifyUsers'?: Array<string> | null;
-    /**
-     * 
-     * @type {Array<string>}
-     * @memberof BotInsertDataActionsInnerAllOf1
-     * @deprecated
-     */
-    'webhooks'?: Array<string> | null;
-    /**
-     * 
-     * @type {Array<BotInsertDataActionsInnerAllOf1HttpRequestInner>}
-     * @memberof BotInsertDataActionsInnerAllOf1
-     */
-    'httpRequest'?: Array<BotInsertDataActionsInnerAllOf1HttpRequestInner> | null;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotInsertDataActionsInnerAllOf1
-     */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotInsertDataActionsInnerAllOf1
-     */
-    'actionPosition'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
-    /**
-     * send in to remove the action
-     * @type {boolean}
-     * @memberof BotInsertDataActionsInnerAllOf1
-     */
-    'remove'?: boolean;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1FormRef}
-     * @memberof BotInsertDataActionsInnerAllOf1
-     */
-    'formRef'?: BotInsertDataActionsInnerAllOf1FormRef | null;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1FormActionMetadata}
-     * @memberof BotInsertDataActionsInnerAllOf1
-     */
-    'formActionMetadata'?: BotInsertDataActionsInnerAllOf1FormActionMetadata | null;
-    /**
-     * Type of the message being sent
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1
-     */
-    'messageType'?: BotInsertDataActionsInnerAllOf1MessageTypeEnum;
-    /**
-     * Account ID of the sender
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1
-     */
-    'accountId'?: string;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1ZapierAction}
-     * @memberof BotInsertDataActionsInnerAllOf1
-     */
-    'zapierAction'?: BotInsertDataActionsInnerAllOf1ZapierAction | null;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1App}
-     * @memberof BotInsertDataActionsInnerAllOf1
-     */
-    'app'?: BotInsertDataActionsInnerAllOf1App;
-}
-
-export const BotInsertDataActionsInnerAllOf1MessageTypeEnum = {
-    Message: 'message',
-    Email: 'email'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1MessageTypeEnum = typeof BotInsertDataActionsInnerAllOf1MessageTypeEnum[keyof typeof BotInsertDataActionsInnerAllOf1MessageTypeEnum];
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1App
- */
-export interface BotInsertDataActionsInnerAllOf1App {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1App
+     * @memberof BotInsertDataActionsInnerAllOfApp
      */
     'appId': string;
     /**
      * 
      * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1App
+     * @memberof BotInsertDataActionsInnerAllOfApp
      */
     'integrationId'?: string;
     /**
      * 
      * @type {{ [key: string]: any; }}
-     * @memberof BotInsertDataActionsInnerAllOf1App
+     * @memberof BotInsertDataActionsInnerAllOfApp
      */
     'input': { [key: string]: any; };
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction}
-     * @memberof BotInsertDataActionsInnerAllOf1App
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction}
+     * @memberof BotInsertDataActionsInnerAllOfApp
      */
-    'nextAction'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction;
-}
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1FormActionMetadata
- */
-export interface BotInsertDataActionsInnerAllOf1FormActionMetadata {
-    /**
-     * If true, the field is required
-     * @type {boolean}
-     * @memberof BotInsertDataActionsInnerAllOf1FormActionMetadata
-     */
-    'required'?: boolean;
-    /**
-     * Type of the field
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1FormActionMetadata
-     */
-    'type'?: BotInsertDataActionsInnerAllOf1FormActionMetadataTypeEnum;
-    /**
-     * Index of the field
-     * @type {number}
-     * @memberof BotInsertDataActionsInnerAllOf1FormActionMetadata
-     */
-    'index'?: number;
-    /**
-     * Custom field to save the value to
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1FormActionMetadata
-     */
-    'saveToCustomField'?: string;
-}
-
-export const BotInsertDataActionsInnerAllOf1FormActionMetadataTypeEnum = {
-    Text: 'text',
-    Number: 'number',
-    Date: 'date',
-    Select: 'select',
-    Multiselect: 'multiselect',
-    Rating: 'rating',
-    Nps: 'nps',
-    Time: 'time'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1FormActionMetadataTypeEnum = typeof BotInsertDataActionsInnerAllOf1FormActionMetadataTypeEnum[keyof typeof BotInsertDataActionsInnerAllOf1FormActionMetadataTypeEnum];
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1FormRef
- */
-export interface BotInsertDataActionsInnerAllOf1FormRef {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1FormRef
-     */
-    'id': string;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1FormRefActions}
-     * @memberof BotInsertDataActionsInnerAllOf1FormRef
-     */
-    'actions'?: BotInsertDataActionsInnerAllOf1FormRefActions;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotInsertDataActionsInnerAllOf1FormRef
-     */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
-}
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1FormRefActions
- */
-export interface BotInsertDataActionsInnerAllOf1FormRefActions {
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction}
-     * @memberof BotInsertDataActionsInnerAllOf1FormRefActions
-     */
-    'onSubmit'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction}
-     * @memberof BotInsertDataActionsInnerAllOf1FormRefActions
-     */
-    'onAbandon'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction;
-}
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1HttpRequestInner
- */
-export interface BotInsertDataActionsInnerAllOf1HttpRequestInner {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1HttpRequestInner
-     */
-    'method': BotInsertDataActionsInnerAllOf1HttpRequestInnerMethodEnum;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1HttpRequestInner
-     */
-    'url': string;
-    /**
-     * 
-     * @type {{ [key: string]: string; }}
-     * @memberof BotInsertDataActionsInnerAllOf1HttpRequestInner
-     */
-    'headers': { [key: string]: string; };
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1HttpRequestInner
-     */
-    'body'?: string;
-}
-
-export const BotInsertDataActionsInnerAllOf1HttpRequestInnerMethodEnum = {
-    Get: 'GET',
-    Post: 'POST'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1HttpRequestInnerMethodEnum = typeof BotInsertDataActionsInnerAllOf1HttpRequestInnerMethodEnum[keyof typeof BotInsertDataActionsInnerAllOf1HttpRequestInnerMethodEnum];
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1Message
- */
-export interface BotInsertDataActionsInnerAllOf1Message {
-    /**
-     * the template message itself
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1Message
-     */
-    'text': string | null;
-    /**
-     * array of attachments for the template
-     * @type {Array<BotInsertDataActionsInnerAllOf1MessageAttachmentsInner>}
-     * @memberof BotInsertDataActionsInnerAllOf1Message
-     */
-    'attachments'?: Array<BotInsertDataActionsInnerAllOf1MessageAttachmentsInner>;
-    /**
-     * 
-     * @type {Array<BotInsertDataActionsInnerAllOf1MessageButtonsInner>}
-     * @memberof BotInsertDataActionsInnerAllOf1Message
-     */
-    'buttons'?: Array<BotInsertDataActionsInnerAllOf1MessageButtonsInner>;
-    /**
-     * 
-     * @type {Array<BotInsertDataActionsInnerAllOf1MessageDelaysInner>}
-     * @memberof BotInsertDataActionsInnerAllOf1Message
-     */
-    'delays'?: Array<BotInsertDataActionsInnerAllOf1MessageDelaysInner>;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageInput}
-     * @memberof BotInsertDataActionsInnerAllOf1Message
-     */
-    'input'?: BotInsertDataActionsInnerAllOf1MessageInput;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageList}
-     * @memberof BotInsertDataActionsInnerAllOf1Message
-     */
-    'list'?: BotInsertDataActionsInnerAllOf1MessageList;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1Message
-     */
-    'quoted'?: string;
-    /**
-     * 
-     * @type {Array<BotInsertDataActionsInnerAllOf1MessageProductsInner>}
-     * @memberof BotInsertDataActionsInnerAllOf1Message
-     */
-    'products'?: Array<BotInsertDataActionsInnerAllOf1MessageProductsInner>;
-    /**
-     * the subject of the message, if applicable
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1Message
-     */
-    'subject'?: string;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageDefaultSendOptions}
-     * @memberof BotInsertDataActionsInnerAllOf1Message
-     */
-    'defaultSendOptions'?: BotInsertDataActionsInnerAllOf1MessageDefaultSendOptions;
-}
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageAttachmentsInner
- */
-export interface BotInsertDataActionsInnerAllOf1MessageAttachmentsInner {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageAttachmentsInner
-     */
-    'type': BotInsertDataActionsInnerAllOf1MessageAttachmentsInnerTypeEnum;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageAttachmentsInner
-     */
-    'mimetype': string;
-    /**
-     * 
-     * @type {boolean}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageAttachmentsInner
-     */
-    'isGif'?: boolean;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageAttachmentsInner
-     */
-    'url': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageAttachmentsInner
-     */
-    'jpegThumbnail'?: string | null;
-    /**
-     * 
-     * @type {number}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageAttachmentsInner
-     */
-    'seconds'?: number;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageAttachmentsInner
-     */
-    'filename'?: string;
-    /**
-     * 
-     * @type {boolean}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageAttachmentsInner
-     */
-    'pttAudio'?: boolean;
-}
-
-export const BotInsertDataActionsInnerAllOf1MessageAttachmentsInnerTypeEnum = {
-    Image: 'image',
-    Video: 'video',
-    Contact: 'contact',
-    Sticker: 'sticker',
-    Audio: 'audio',
-    Document: 'document',
-    Location: 'location'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1MessageAttachmentsInnerTypeEnum = typeof BotInsertDataActionsInnerAllOf1MessageAttachmentsInnerTypeEnum[keyof typeof BotInsertDataActionsInnerAllOf1MessageAttachmentsInnerTypeEnum];
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageButtonsInner
- */
-export interface BotInsertDataActionsInnerAllOf1MessageButtonsInner {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInner
-     */
-    'text': string;
-    /**
-     * Use \"nextAction\" instead
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInner
-     * @deprecated
-     */
-    'triggerActionId'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInner
-     */
-    'triggerBotId'?: string | null;
-    /**
-     * Make a button with a link
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInner
-     */
-    'url'?: string;
-    /**
-     * Make a button with a phone number
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInner
-     */
-    'phoneNumber'?: string;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInner
-     */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInner
-     */
-    'nextAction'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction;
-}
-/**
- * Specify the next action to be fired
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction
- */
-export interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction {
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionDefaultAction}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction
-     */
-    'defaultAction'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionDefaultAction;
-    /**
-     * List of conditions to validate
-     * @type {Array<BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInner>}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction
-     */
-    'groups'?: Array<BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInner>;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction
-     */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
-}
-/**
- * Fired if all validations failed or no validations are provided
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionDefaultAction
- */
-export interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionDefaultAction {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionDefaultAction
-     */
-    'triggerActionId': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionDefaultAction
-     */
-    'triggerBotId'?: string;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionDefaultAction
-     */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
-}
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionDefaultActionAllOf
- */
-export interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionDefaultActionAllOf {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionDefaultActionAllOf
-     */
-    'triggerActionId': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionDefaultActionAllOf
-     */
-    'triggerBotId'?: string;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionDefaultActionAllOf
-     */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
-}
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInner
- */
-export interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInner {
-    /**
-     * Operator for all validations
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInner
-     */
-    'operator': BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerOperatorEnum;
-    /**
-     * Fields to validate
-     * @type {Array<BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInner>}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInner
-     */
-    'validation': Array<BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInner>;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerTarget}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInner
-     */
-    'target': BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerTarget;
-}
-
-export const BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerOperatorEnum = {
-    And: 'and',
-    Or: 'or'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerOperatorEnum = typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerOperatorEnum[keyof typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerOperatorEnum];
-
-/**
- * Action to fire if all validations pass
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerTarget
- */
-export interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerTarget {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerTarget
-     */
-    'triggerActionId': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerTarget
-     */
-    'triggerBotId'?: string;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerTarget
-     */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
-}
-/**
- * @type BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInner
- * @export
- */
-export type BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInner = BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf | BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1 | BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2 | BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3 | BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4 | BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5 | BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6;
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf
- */
-export interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf
-     */
-    'propertyPath': string;
-    /**
-     * 
-     * @type {number}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf
-     */
-    'value': number;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf
-     */
-    'operator': BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOfOperatorEnum;
-}
-
-export const BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOfOperatorEnum = {
-    GreaterThan: 'greaterThan',
-    LessThan: 'lessThan',
-    GreaterThanOrEquals: 'greaterThanOrEquals',
-    LessThanOrEquals: 'lessThanOrEquals'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOfOperatorEnum = typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOfOperatorEnum[keyof typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOfOperatorEnum];
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1
- */
-export interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1 {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1
-     */
-    'propertyPath': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1
-     */
-    'value': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1
-     */
-    'operator': BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1OperatorEnum;
-}
-
-export const BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1OperatorEnum = {
-    NotEmpty: 'notEmpty',
-    Contains: 'contains',
-    NotContains: 'notContains',
-    StartsWith: 'startsWith',
-    EndsWith: 'endsWith',
-    ContainsPhrase: 'containsPhrase'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1OperatorEnum = typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1OperatorEnum[keyof typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1OperatorEnum];
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2
- */
-export interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2 {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2
-     */
-    'propertyPath': string;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2Value}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2
-     */
-    'value': BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2Value;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2
-     */
-    'operator': BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2OperatorEnum;
-}
-
-export const BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2OperatorEnum = {
-    Timestamp: 'timestamp'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2OperatorEnum = typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2OperatorEnum[keyof typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2OperatorEnum];
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2Value
- */
-export interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2Value {
-    /**
-     * 
-     * @type {Array<string>}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2Value
-     */
-    'days'?: Array<BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2ValueDaysEnum>;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2Value
-     */
-    'startTime': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2Value
-     */
-    'endTime': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2Value
-     */
-    'timezone': string;
-}
-
-export const BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2ValueDaysEnum = {
-    Monday: 'Monday',
-    Tuesday: 'Tuesday',
-    Wednesday: 'Wednesday',
-    Thursday: 'Thursday',
-    Friday: 'Friday',
-    Saturday: 'Saturday',
-    Sunday: 'Sunday'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2ValueDaysEnum = typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2ValueDaysEnum[keyof typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2ValueDaysEnum];
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3
- */
-export interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3 {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3
-     */
-    'propertyPath': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3
-     */
-    'operator': BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3OperatorEnum;
-}
-
-export const BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3OperatorEnum = {
-    IsTrue: 'isTrue',
-    IsFalse: 'isFalse'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3OperatorEnum = typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3OperatorEnum[keyof typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3OperatorEnum];
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4
- */
-export interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4 {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4
-     */
-    'propertyPath': string;
-    /**
-     * 
-     * @type {Array<BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4ValuesInner>}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4
-     */
-    'values': Array<BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4ValuesInner>;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4
-     */
-    'operator': BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4OperatorEnum;
-}
-
-export const BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4OperatorEnum = {
-    NotEmpty: 'notEmpty',
-    Equals: 'equals',
-    NotEquals: 'notEquals',
-    GreaterThan: 'greaterThan',
-    LessThan: 'lessThan',
-    GreaterThanOrEquals: 'greaterThanOrEquals',
-    LessThanOrEquals: 'lessThanOrEquals',
-    Contains: 'contains',
-    NotContains: 'notContains',
-    StartsWith: 'startsWith',
-    EndsWith: 'endsWith'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4OperatorEnum = typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4OperatorEnum[keyof typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4OperatorEnum];
-
-/**
- * @type BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4ValuesInner
- * @export
- */
-export type BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4ValuesInner = number | string;
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5
- */
-export interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5 {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5
-     */
-    'propertyPath': string;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5Value}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5
-     */
-    'value': BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5Value;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5
-     */
-    'operator': BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5OperatorEnum;
-}
-
-export const BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5OperatorEnum = {
-    Equals: 'equals',
-    NotEquals: 'notEquals'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5OperatorEnum = typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5OperatorEnum[keyof typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5OperatorEnum];
-
-/**
- * @type BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5Value
- * @export
- */
-export type BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5Value = Array<string> | number | string;
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6
- */
-export interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6 {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6
-     */
-    'propertyPath': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6
-     */
-    'value': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6
-     */
-    'operator': BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6OperatorEnum;
-}
-
-export const BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6OperatorEnum = {
-    TimestampGreaterThan: 'timestampGreaterThan',
-    TimestampLessThan: 'timestampLessThan'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6OperatorEnum = typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6OperatorEnum[keyof typeof BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6OperatorEnum];
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition
- */
-export interface BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition {
-    /**
-     * 
-     * @type {number}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition
-     */
-    'x': number;
-    /**
-     * 
-     * @type {number}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition
-     */
-    'y': number;
-}
-/**
- * Minimal default send options for the message
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageDefaultSendOptions
- */
-export interface BotInsertDataActionsInnerAllOf1MessageDefaultSendOptions {
-    /**
-     * 
-     * @type {boolean}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDefaultSendOptions
-     */
-    'simulateTyping'?: boolean;
-    /**
-     * 
-     * @type {boolean}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDefaultSendOptions
-     */
-    'cancelIfReplyReceived'?: boolean;
-}
-/**
- * @type BotInsertDataActionsInnerAllOf1MessageDelaysInner
- * @export
- */
-export type BotInsertDataActionsInnerAllOf1MessageDelaysInner = BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf | BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1 | BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf2 | BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3;
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf
- */
-export interface BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf {
-    /**
-     * Time delays on second
-     * @type {number}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf
-     */
-    'timeDelaySec': number;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf
-     */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
-    /**
-     * Use \"nextAction\" instead
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf
-     * @deprecated
-     */
-    'triggerActionId'?: string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf
-     */
-    'triggerBotId'?: string | null;
-    /**
-     * Simulate typing
-     * @type {boolean}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf
-     */
-    'simulateTyping'?: boolean;
-    /**
-     * If true, the message will be cancelled if a reply is received
-     * @type {boolean}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf
-     */
-    'cancelIfReplyReceived'?: boolean;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf
-     */
-    'nextAction'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction;
-}
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1
- */
-export interface BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1 {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1
-     */
-    'type': BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1TypeEnum;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1Value}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1
-     */
-    'value': BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1Value;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1
-     */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
-    /**
-     * Simulate typing
-     * @type {boolean}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1
-     */
-    'simulateTyping'?: boolean;
-    /**
-     * If true, the message will be cancelled if a reply is received
-     * @type {boolean}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1
-     */
-    'cancelIfReplyReceived'?: boolean;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1
-     */
-    'nextAction'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction;
-}
-
-export const BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1TypeEnum = {
-    Timestamp: 'timestamp'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1TypeEnum = typeof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1TypeEnum[keyof typeof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1TypeEnum];
-
-/**
- * Provide either a property path to extract from the payload /payload data or an exact value
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1Value
- */
-export interface BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1Value {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1Value
-     */
-    'type': BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1ValueTypeEnum;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1Value
-     */
-    'value': string;
-}
-
-export const BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1ValueTypeEnum = {
-    PropertyPath: 'propertyPath',
-    Exact: 'exact'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1ValueTypeEnum = typeof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1ValueTypeEnum[keyof typeof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf1ValueTypeEnum];
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf2
- */
-export interface BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf2 {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf2
-     */
-    'type': BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf2TypeEnum;
-    /**
-     * Delay in seconds
-     * @type {number}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf2
-     */
-    'value': number;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf2
-     */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
-    /**
-     * Simulate typing
-     * @type {boolean}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf2
-     */
-    'simulateTyping'?: boolean;
-    /**
-     * If true, the message will be cancelled if a reply is received
-     * @type {boolean}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf2
-     */
-    'cancelIfReplyReceived'?: boolean;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf2
-     */
-    'nextAction'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction;
-}
-
-export const BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf2TypeEnum = {
-    DelaySeconds: 'delay_seconds'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf2TypeEnum = typeof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf2TypeEnum[keyof typeof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf2TypeEnum];
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3
- */
-export interface BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3 {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3
-     */
-    'type': BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3TypeEnum;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3Value}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3
-     */
-    'value': BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3Value;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3
-     */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
-    /**
-     * Simulate typing
-     * @type {boolean}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3
-     */
-    'simulateTyping'?: boolean;
-    /**
-     * If true, the message will be cancelled if a reply is received
-     * @type {boolean}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3
-     */
-    'cancelIfReplyReceived'?: boolean;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3
-     */
-    'nextAction'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction;
-}
-
-export const BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3TypeEnum = {
-    Weekday: 'weekday'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3TypeEnum = typeof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3TypeEnum[keyof typeof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3TypeEnum];
-
-/**
- * Provide a weekday value with time to set the delay
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3Value
- */
-export interface BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3Value {
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3ValueDay}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3Value
-     */
-    'day': BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3ValueDay;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3Value
-     */
-    'time': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3Value
-     */
-    'timezone': string;
-}
-/**
- * @type BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3ValueDay
- * @export
- */
-export type BotInsertDataActionsInnerAllOf1MessageDelaysInnerOneOf3ValueDay = string;
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageInput
- */
-export interface BotInsertDataActionsInnerAllOf1MessageInput {
-    /**
-     * Name of the input. If not specified, the input received will be forwarded as the key \"value\" in the next action
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageInput
-     */
-    'name'?: string;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageInputValidation}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageInput
-     */
-    'validation'?: BotInsertDataActionsInnerAllOf1MessageInputValidation;
-    /**
-     * Use \"nextAction\" instead
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageInput
-     * @deprecated
-     */
-    'triggerActionId'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageInput
-     */
-    'triggerBotId'?: string | null;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageInput
-     */
-    'nextAction'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageInput
-     */
-    'validationFailAction'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageInput
-     */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
-}
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageInputValidation
- */
-export interface BotInsertDataActionsInnerAllOf1MessageInputValidation {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageInputValidation
-     */
-    'type': BotInsertDataActionsInnerAllOf1MessageInputValidationTypeEnum;
-}
-
-export const BotInsertDataActionsInnerAllOf1MessageInputValidationTypeEnum = {
-    String: 'string',
-    Integer: 'integer',
-    Boolean: 'boolean',
-    ImageAttachment: 'image_attachment',
-    Attachment: 'attachment'
-} as const;
-
-export type BotInsertDataActionsInnerAllOf1MessageInputValidationTypeEnum = typeof BotInsertDataActionsInnerAllOf1MessageInputValidationTypeEnum[keyof typeof BotInsertDataActionsInnerAllOf1MessageInputValidationTypeEnum];
-
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageList
- */
-export interface BotInsertDataActionsInnerAllOf1MessageList {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageList
-     */
-    'title'?: string;
-    /**
-     * 
-     * @type {Array<BotInsertDataActionsInnerAllOf1MessageListSectionsInner>}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageList
-     */
-    'sections': Array<BotInsertDataActionsInnerAllOf1MessageListSectionsInner>;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageList
-     */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
-}
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageListSectionsInner
- */
-export interface BotInsertDataActionsInnerAllOf1MessageListSectionsInner {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageListSectionsInner
-     */
-    'title': string;
-    /**
-     * 
-     * @type {Array<BotInsertDataActionsInnerAllOf1MessageListSectionsInnerOptionsInner>}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageListSectionsInner
-     */
-    'options': Array<BotInsertDataActionsInnerAllOf1MessageListSectionsInnerOptionsInner>;
-}
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageListSectionsInnerOptionsInner
- */
-export interface BotInsertDataActionsInnerAllOf1MessageListSectionsInnerOptionsInner {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageListSectionsInnerOptionsInner
-     */
-    'text': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageListSectionsInnerOptionsInner
-     */
-    'description'?: string;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageListSectionsInnerOptionsInner
-     */
-    'nextAction'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction;
-}
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1MessageProductsInner
- */
-export interface BotInsertDataActionsInnerAllOf1MessageProductsInner {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageProductsInner
-     */
-    'id': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1MessageProductsInner
-     */
-    'accountId': string;
-}
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1TagsInner
- */
-export interface BotInsertDataActionsInnerAllOf1TagsInner {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1TagsInner
-     */
-    'name': string;
-    /**
-     * 
-     * @type {boolean}
-     * @memberof BotInsertDataActionsInnerAllOf1TagsInner
-     */
-    'remove'?: boolean;
-}
-/**
- * 
- * @export
- * @interface BotInsertDataActionsInnerAllOf1ZapierAction
- */
-export interface BotInsertDataActionsInnerAllOf1ZapierAction {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1ZapierAction
-     */
-    'editZapPopupURL'?: string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotInsertDataActionsInnerAllOf1ZapierAction
-     */
-    'zapId'?: string;
+    'nextAction'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction;
 }
 /**
  * 
@@ -2790,6 +1546,1230 @@ export const BotInsertDataActionsInnerAllOfExternalTemplateValueStatusEnum = {
 export type BotInsertDataActionsInnerAllOfExternalTemplateValueStatusEnum = typeof BotInsertDataActionsInnerAllOfExternalTemplateValueStatusEnum[keyof typeof BotInsertDataActionsInnerAllOfExternalTemplateValueStatusEnum];
 
 /**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfFormActionMetadata
+ */
+export interface BotInsertDataActionsInnerAllOfFormActionMetadata {
+    /**
+     * If true, the field is required
+     * @type {boolean}
+     * @memberof BotInsertDataActionsInnerAllOfFormActionMetadata
+     */
+    'required'?: boolean;
+    /**
+     * Type of the field
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfFormActionMetadata
+     */
+    'type'?: BotInsertDataActionsInnerAllOfFormActionMetadataTypeEnum;
+    /**
+     * Index of the field
+     * @type {number}
+     * @memberof BotInsertDataActionsInnerAllOfFormActionMetadata
+     */
+    'index'?: number;
+    /**
+     * Custom field to save the value to
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfFormActionMetadata
+     */
+    'saveToCustomField'?: string;
+}
+
+export const BotInsertDataActionsInnerAllOfFormActionMetadataTypeEnum = {
+    Text: 'text',
+    Number: 'number',
+    Date: 'date',
+    Select: 'select',
+    Multiselect: 'multiselect',
+    Rating: 'rating',
+    Nps: 'nps',
+    Time: 'time'
+} as const;
+
+export type BotInsertDataActionsInnerAllOfFormActionMetadataTypeEnum = typeof BotInsertDataActionsInnerAllOfFormActionMetadataTypeEnum[keyof typeof BotInsertDataActionsInnerAllOfFormActionMetadataTypeEnum];
+
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfFormRef
+ */
+export interface BotInsertDataActionsInnerAllOfFormRef {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfFormRef
+     */
+    'id': string;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfFormRefActions}
+     * @memberof BotInsertDataActionsInnerAllOfFormRef
+     */
+    'actions'?: BotInsertDataActionsInnerAllOfFormRefActions;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
+     * @memberof BotInsertDataActionsInnerAllOfFormRef
+     */
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
+}
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfFormRefActions
+ */
+export interface BotInsertDataActionsInnerAllOfFormRefActions {
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction}
+     * @memberof BotInsertDataActionsInnerAllOfFormRefActions
+     */
+    'onSubmit'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction}
+     * @memberof BotInsertDataActionsInnerAllOfFormRefActions
+     */
+    'onAbandon'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction;
+}
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfHttpRequestInner
+ */
+export interface BotInsertDataActionsInnerAllOfHttpRequestInner {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfHttpRequestInner
+     */
+    'method': BotInsertDataActionsInnerAllOfHttpRequestInnerMethodEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfHttpRequestInner
+     */
+    'url': string;
+    /**
+     * 
+     * @type {{ [key: string]: string; }}
+     * @memberof BotInsertDataActionsInnerAllOfHttpRequestInner
+     */
+    'headers': { [key: string]: string; };
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfHttpRequestInner
+     */
+    'body'?: string;
+}
+
+export const BotInsertDataActionsInnerAllOfHttpRequestInnerMethodEnum = {
+    Get: 'GET',
+    Post: 'POST'
+} as const;
+
+export type BotInsertDataActionsInnerAllOfHttpRequestInnerMethodEnum = typeof BotInsertDataActionsInnerAllOfHttpRequestInnerMethodEnum[keyof typeof BotInsertDataActionsInnerAllOfHttpRequestInnerMethodEnum];
+
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessage
+ */
+export interface BotInsertDataActionsInnerAllOfMessage {
+    /**
+     * the template message itself
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessage
+     */
+    'text': string | null;
+    /**
+     * array of attachments for the template
+     * @type {Array<BotInsertDataActionsInnerAllOfMessageAttachmentsInner>}
+     * @memberof BotInsertDataActionsInnerAllOfMessage
+     */
+    'attachments'?: Array<BotInsertDataActionsInnerAllOfMessageAttachmentsInner>;
+    /**
+     * 
+     * @type {Array<BotInsertDataActionsInnerAllOfMessageButtonsInner>}
+     * @memberof BotInsertDataActionsInnerAllOfMessage
+     */
+    'buttons'?: Array<BotInsertDataActionsInnerAllOfMessageButtonsInner>;
+    /**
+     * 
+     * @type {Array<BotInsertDataActionsInnerAllOfMessageDelaysInner>}
+     * @memberof BotInsertDataActionsInnerAllOfMessage
+     */
+    'delays'?: Array<BotInsertDataActionsInnerAllOfMessageDelaysInner>;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageInput}
+     * @memberof BotInsertDataActionsInnerAllOfMessage
+     */
+    'input'?: BotInsertDataActionsInnerAllOfMessageInput;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageList}
+     * @memberof BotInsertDataActionsInnerAllOfMessage
+     */
+    'list'?: BotInsertDataActionsInnerAllOfMessageList;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessage
+     */
+    'quoted'?: string;
+    /**
+     * 
+     * @type {Array<BotInsertDataActionsInnerAllOfMessageProductsInner>}
+     * @memberof BotInsertDataActionsInnerAllOfMessage
+     */
+    'products'?: Array<BotInsertDataActionsInnerAllOfMessageProductsInner>;
+    /**
+     * the subject of the message, if applicable
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessage
+     */
+    'subject'?: string;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageDefaultSendOptions}
+     * @memberof BotInsertDataActionsInnerAllOfMessage
+     */
+    'defaultSendOptions'?: BotInsertDataActionsInnerAllOfMessageDefaultSendOptions;
+}
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageAttachmentsInner
+ */
+export interface BotInsertDataActionsInnerAllOfMessageAttachmentsInner {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageAttachmentsInner
+     */
+    'type': BotInsertDataActionsInnerAllOfMessageAttachmentsInnerTypeEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageAttachmentsInner
+     */
+    'mimetype': string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof BotInsertDataActionsInnerAllOfMessageAttachmentsInner
+     */
+    'isGif'?: boolean;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageAttachmentsInner
+     */
+    'url': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageAttachmentsInner
+     */
+    'jpegThumbnail'?: string | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof BotInsertDataActionsInnerAllOfMessageAttachmentsInner
+     */
+    'seconds'?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageAttachmentsInner
+     */
+    'filename'?: string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof BotInsertDataActionsInnerAllOfMessageAttachmentsInner
+     */
+    'pttAudio'?: boolean;
+}
+
+export const BotInsertDataActionsInnerAllOfMessageAttachmentsInnerTypeEnum = {
+    Image: 'image',
+    Video: 'video',
+    Contact: 'contact',
+    Sticker: 'sticker',
+    Audio: 'audio',
+    Document: 'document',
+    Location: 'location'
+} as const;
+
+export type BotInsertDataActionsInnerAllOfMessageAttachmentsInnerTypeEnum = typeof BotInsertDataActionsInnerAllOfMessageAttachmentsInnerTypeEnum[keyof typeof BotInsertDataActionsInnerAllOfMessageAttachmentsInnerTypeEnum];
+
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageButtonsInner
+ */
+export interface BotInsertDataActionsInnerAllOfMessageButtonsInner {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInner
+     */
+    'text': string;
+    /**
+     * Use \"nextAction\" instead
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInner
+     * @deprecated
+     */
+    'triggerActionId'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInner
+     */
+    'triggerBotId'?: string | null;
+    /**
+     * Make a button with a link
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInner
+     */
+    'url'?: string;
+    /**
+     * Make a button with a phone number
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInner
+     */
+    'phoneNumber'?: string;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInner
+     */
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInner
+     */
+    'nextAction'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction;
+}
+/**
+ * Specify the next action to be fired
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction
+ */
+export interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction {
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionDefaultAction}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction
+     */
+    'defaultAction'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionDefaultAction;
+    /**
+     * List of conditions to validate
+     * @type {Array<BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInner>}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction
+     */
+    'groups'?: Array<BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInner>;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction
+     */
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
+}
+/**
+ * Fired if all validations failed or no validations are provided
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionDefaultAction
+ */
+export interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionDefaultAction {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionDefaultAction
+     */
+    'triggerActionId': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionDefaultAction
+     */
+    'triggerBotId'?: string;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionDefaultAction
+     */
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
+}
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInner
+ */
+export interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInner {
+    /**
+     * Operator for all validations
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInner
+     */
+    'operator': BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerOperatorEnum;
+    /**
+     * Fields to validate
+     * @type {Array<BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInner>}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInner
+     */
+    'validation': Array<BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInner>;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerTarget}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInner
+     */
+    'target': BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerTarget;
+}
+
+export const BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerOperatorEnum = {
+    And: 'and',
+    Or: 'or'
+} as const;
+
+export type BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerOperatorEnum = typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerOperatorEnum[keyof typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerOperatorEnum];
+
+/**
+ * Action to fire if all validations pass
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerTarget
+ */
+export interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerTarget {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerTarget
+     */
+    'triggerActionId': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerTarget
+     */
+    'triggerBotId'?: string;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerTarget
+     */
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
+}
+/**
+ * @type BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInner
+ * @export
+ */
+export type BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInner = BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf | BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1 | BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2 | BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3 | BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4 | BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5 | BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6;
+
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf
+ */
+export interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf
+     */
+    'propertyPath': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf
+     */
+    'value': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf
+     */
+    'operator': BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOfOperatorEnum;
+}
+
+export const BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOfOperatorEnum = {
+    GreaterThan: 'greaterThan',
+    LessThan: 'lessThan',
+    GreaterThanOrEquals: 'greaterThanOrEquals',
+    LessThanOrEquals: 'lessThanOrEquals'
+} as const;
+
+export type BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOfOperatorEnum = typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOfOperatorEnum[keyof typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOfOperatorEnum];
+
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1
+ */
+export interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1 {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1
+     */
+    'propertyPath': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1
+     */
+    'value': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1
+     */
+    'operator': BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1OperatorEnum;
+}
+
+export const BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1OperatorEnum = {
+    NotEmpty: 'notEmpty',
+    Contains: 'contains',
+    NotContains: 'notContains',
+    StartsWith: 'startsWith',
+    EndsWith: 'endsWith',
+    ContainsPhrase: 'containsPhrase'
+} as const;
+
+export type BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1OperatorEnum = typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1OperatorEnum[keyof typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf1OperatorEnum];
+
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2
+ */
+export interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2 {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2
+     */
+    'propertyPath': string;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2Value}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2
+     */
+    'value': BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2Value;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2
+     */
+    'operator': BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2OperatorEnum;
+}
+
+export const BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2OperatorEnum = {
+    Timestamp: 'timestamp'
+} as const;
+
+export type BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2OperatorEnum = typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2OperatorEnum[keyof typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2OperatorEnum];
+
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2Value
+ */
+export interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2Value {
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2Value
+     */
+    'days'?: Array<BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2ValueDaysEnum>;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2Value
+     */
+    'startTime': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2Value
+     */
+    'endTime': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2Value
+     */
+    'timezone': string;
+}
+
+export const BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2ValueDaysEnum = {
+    Monday: 'Monday',
+    Tuesday: 'Tuesday',
+    Wednesday: 'Wednesday',
+    Thursday: 'Thursday',
+    Friday: 'Friday',
+    Saturday: 'Saturday',
+    Sunday: 'Sunday'
+} as const;
+
+export type BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2ValueDaysEnum = typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2ValueDaysEnum[keyof typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf2ValueDaysEnum];
+
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3
+ */
+export interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3 {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3
+     */
+    'propertyPath': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3
+     */
+    'operator': BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3OperatorEnum;
+}
+
+export const BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3OperatorEnum = {
+    IsTrue: 'isTrue',
+    IsFalse: 'isFalse'
+} as const;
+
+export type BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3OperatorEnum = typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3OperatorEnum[keyof typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf3OperatorEnum];
+
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4
+ */
+export interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4 {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4
+     */
+    'propertyPath': string;
+    /**
+     * 
+     * @type {Array<BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4ValuesInner>}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4
+     */
+    'values': Array<BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4ValuesInner>;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4
+     */
+    'operator': BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4OperatorEnum;
+}
+
+export const BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4OperatorEnum = {
+    NotEmpty: 'notEmpty',
+    Equals: 'equals',
+    NotEquals: 'notEquals',
+    GreaterThan: 'greaterThan',
+    LessThan: 'lessThan',
+    GreaterThanOrEquals: 'greaterThanOrEquals',
+    LessThanOrEquals: 'lessThanOrEquals',
+    Contains: 'contains',
+    NotContains: 'notContains',
+    StartsWith: 'startsWith',
+    EndsWith: 'endsWith'
+} as const;
+
+export type BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4OperatorEnum = typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4OperatorEnum[keyof typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4OperatorEnum];
+
+/**
+ * @type BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4ValuesInner
+ * @export
+ */
+export type BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf4ValuesInner = number | string;
+
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5
+ */
+export interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5 {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5
+     */
+    'propertyPath': string;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5Value}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5
+     */
+    'value': BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5Value;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5
+     */
+    'operator': BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5OperatorEnum;
+}
+
+export const BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5OperatorEnum = {
+    Equals: 'equals',
+    NotEquals: 'notEquals'
+} as const;
+
+export type BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5OperatorEnum = typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5OperatorEnum[keyof typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5OperatorEnum];
+
+/**
+ * @type BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5Value
+ * @export
+ */
+export type BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf5Value = Array<string> | number | string;
+
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6
+ */
+export interface BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6 {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6
+     */
+    'propertyPath': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6
+     */
+    'value': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6
+     */
+    'operator': BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6OperatorEnum;
+}
+
+export const BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6OperatorEnum = {
+    TimestampGreaterThan: 'timestampGreaterThan',
+    TimestampLessThan: 'timestampLessThan'
+} as const;
+
+export type BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6OperatorEnum = typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6OperatorEnum[keyof typeof BotInsertDataActionsInnerAllOfMessageButtonsInnerNextActionGroupsInnerValidationInnerOneOf6OperatorEnum];
+
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition
+ */
+export interface BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition {
+    /**
+     * 
+     * @type {number}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition
+     */
+    'x': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition
+     */
+    'y': number;
+}
+/**
+ * Minimal default send options for the message
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageDefaultSendOptions
+ */
+export interface BotInsertDataActionsInnerAllOfMessageDefaultSendOptions {
+    /**
+     * 
+     * @type {boolean}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDefaultSendOptions
+     */
+    'simulateTyping'?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDefaultSendOptions
+     */
+    'cancelIfReplyReceived'?: boolean;
+}
+/**
+ * @type BotInsertDataActionsInnerAllOfMessageDelaysInner
+ * @export
+ */
+export type BotInsertDataActionsInnerAllOfMessageDelaysInner = BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf | BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1 | BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf2 | BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3;
+
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf
+ */
+export interface BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf {
+    /**
+     * Time delays on second
+     * @type {number}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf
+     */
+    'timeDelaySec': number;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf
+     */
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
+    /**
+     * Use \"nextAction\" instead
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf
+     * @deprecated
+     */
+    'triggerActionId'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf
+     */
+    'triggerBotId'?: string | null;
+    /**
+     * Simulate typing
+     * @type {boolean}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf
+     */
+    'simulateTyping'?: boolean;
+    /**
+     * If true, the message will be cancelled if a reply is received
+     * @type {boolean}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf
+     */
+    'cancelIfReplyReceived'?: boolean;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf
+     */
+    'nextAction'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction;
+}
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1
+ */
+export interface BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1 {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1
+     */
+    'type': BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1TypeEnum;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1Value}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1
+     */
+    'value': BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1Value;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1
+     */
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
+    /**
+     * Simulate typing
+     * @type {boolean}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1
+     */
+    'simulateTyping'?: boolean;
+    /**
+     * If true, the message will be cancelled if a reply is received
+     * @type {boolean}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1
+     */
+    'cancelIfReplyReceived'?: boolean;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1
+     */
+    'nextAction'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction;
+}
+
+export const BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1TypeEnum = {
+    Timestamp: 'timestamp'
+} as const;
+
+export type BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1TypeEnum = typeof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1TypeEnum[keyof typeof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1TypeEnum];
+
+/**
+ * Provide either a property path to extract from the payload /payload data or an exact value
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1Value
+ */
+export interface BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1Value {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1Value
+     */
+    'type': BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1ValueTypeEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1Value
+     */
+    'value': string;
+}
+
+export const BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1ValueTypeEnum = {
+    PropertyPath: 'propertyPath',
+    Exact: 'exact'
+} as const;
+
+export type BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1ValueTypeEnum = typeof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1ValueTypeEnum[keyof typeof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf1ValueTypeEnum];
+
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf2
+ */
+export interface BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf2 {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf2
+     */
+    'type': BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf2TypeEnum;
+    /**
+     * Delay in seconds
+     * @type {number}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf2
+     */
+    'value': number;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf2
+     */
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
+    /**
+     * Simulate typing
+     * @type {boolean}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf2
+     */
+    'simulateTyping'?: boolean;
+    /**
+     * If true, the message will be cancelled if a reply is received
+     * @type {boolean}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf2
+     */
+    'cancelIfReplyReceived'?: boolean;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf2
+     */
+    'nextAction'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction;
+}
+
+export const BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf2TypeEnum = {
+    DelaySeconds: 'delay_seconds'
+} as const;
+
+export type BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf2TypeEnum = typeof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf2TypeEnum[keyof typeof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf2TypeEnum];
+
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3
+ */
+export interface BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3 {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3
+     */
+    'type': BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3TypeEnum;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3Value}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3
+     */
+    'value': BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3Value;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3
+     */
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
+    /**
+     * Simulate typing
+     * @type {boolean}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3
+     */
+    'simulateTyping'?: boolean;
+    /**
+     * If true, the message will be cancelled if a reply is received
+     * @type {boolean}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3
+     */
+    'cancelIfReplyReceived'?: boolean;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3
+     */
+    'nextAction'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction;
+}
+
+export const BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3TypeEnum = {
+    Weekday: 'weekday'
+} as const;
+
+export type BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3TypeEnum = typeof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3TypeEnum[keyof typeof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3TypeEnum];
+
+/**
+ * Provide a weekday value with time to set the delay
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3Value
+ */
+export interface BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3Value {
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3ValueDay}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3Value
+     */
+    'day': BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3ValueDay;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3Value
+     */
+    'time': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3Value
+     */
+    'timezone': string;
+}
+/**
+ * @type BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3ValueDay
+ * @export
+ */
+export type BotInsertDataActionsInnerAllOfMessageDelaysInnerOneOf3ValueDay = string;
+
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageInput
+ */
+export interface BotInsertDataActionsInnerAllOfMessageInput {
+    /**
+     * Name of the input. If not specified, the input received will be forwarded as the key \"value\" in the next action
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageInput
+     */
+    'name'?: string;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageInputValidation}
+     * @memberof BotInsertDataActionsInnerAllOfMessageInput
+     */
+    'validation'?: BotInsertDataActionsInnerAllOfMessageInputValidation;
+    /**
+     * Use \"nextAction\" instead
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageInput
+     * @deprecated
+     */
+    'triggerActionId'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageInput
+     */
+    'triggerBotId'?: string | null;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction}
+     * @memberof BotInsertDataActionsInnerAllOfMessageInput
+     */
+    'nextAction'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction}
+     * @memberof BotInsertDataActionsInnerAllOfMessageInput
+     */
+    'validationFailAction'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
+     * @memberof BotInsertDataActionsInnerAllOfMessageInput
+     */
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
+}
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageInputValidation
+ */
+export interface BotInsertDataActionsInnerAllOfMessageInputValidation {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageInputValidation
+     */
+    'type': BotInsertDataActionsInnerAllOfMessageInputValidationTypeEnum;
+}
+
+export const BotInsertDataActionsInnerAllOfMessageInputValidationTypeEnum = {
+    String: 'string',
+    Integer: 'integer',
+    Boolean: 'boolean',
+    ImageAttachment: 'image_attachment',
+    Attachment: 'attachment'
+} as const;
+
+export type BotInsertDataActionsInnerAllOfMessageInputValidationTypeEnum = typeof BotInsertDataActionsInnerAllOfMessageInputValidationTypeEnum[keyof typeof BotInsertDataActionsInnerAllOfMessageInputValidationTypeEnum];
+
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageList
+ */
+export interface BotInsertDataActionsInnerAllOfMessageList {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageList
+     */
+    'title'?: string;
+    /**
+     * 
+     * @type {Array<BotInsertDataActionsInnerAllOfMessageListSectionsInner>}
+     * @memberof BotInsertDataActionsInnerAllOfMessageList
+     */
+    'sections': Array<BotInsertDataActionsInnerAllOfMessageListSectionsInner>;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
+     * @memberof BotInsertDataActionsInnerAllOfMessageList
+     */
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
+}
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageListSectionsInner
+ */
+export interface BotInsertDataActionsInnerAllOfMessageListSectionsInner {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageListSectionsInner
+     */
+    'title': string;
+    /**
+     * 
+     * @type {Array<BotInsertDataActionsInnerAllOfMessageListSectionsInnerOptionsInner>}
+     * @memberof BotInsertDataActionsInnerAllOfMessageListSectionsInner
+     */
+    'options': Array<BotInsertDataActionsInnerAllOfMessageListSectionsInnerOptionsInner>;
+}
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageListSectionsInnerOptionsInner
+ */
+export interface BotInsertDataActionsInnerAllOfMessageListSectionsInnerOptionsInner {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageListSectionsInnerOptionsInner
+     */
+    'text': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageListSectionsInnerOptionsInner
+     */
+    'description'?: string;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction}
+     * @memberof BotInsertDataActionsInnerAllOfMessageListSectionsInnerOptionsInner
+     */
+    'nextAction'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction;
+}
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfMessageProductsInner
+ */
+export interface BotInsertDataActionsInnerAllOfMessageProductsInner {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageProductsInner
+     */
+    'id': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfMessageProductsInner
+     */
+    'accountId': string;
+}
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfTagsInner
+ */
+export interface BotInsertDataActionsInnerAllOfTagsInner {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfTagsInner
+     */
+    'name': string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof BotInsertDataActionsInnerAllOfTagsInner
+     */
+    'remove'?: boolean;
+}
+/**
+ * 
+ * @export
+ * @interface BotInsertDataActionsInnerAllOfZapierAction
+ */
+export interface BotInsertDataActionsInnerAllOfZapierAction {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfZapierAction
+     */
+    'editZapPopupURL'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotInsertDataActionsInnerAllOfZapierAction
+     */
+    'zapId'?: string;
+}
+/**
  * @type BotInsertDataExternalTemplateStatus
  * @export
  */
@@ -2815,10 +2795,10 @@ export interface BotInsertDataNotesInner {
     'noteType'?: BotInsertDataNotesInnerNoteTypeEnum;
     /**
      * 
-     * @type {Array<BotInsertDataActionsInnerAllOf1MessageAttachmentsInner>}
+     * @type {Array<BotInsertDataActionsInnerAllOfMessageAttachmentsInner>}
      * @memberof BotInsertDataNotesInner
      */
-    'attachments'?: Array<BotInsertDataActionsInnerAllOf1MessageAttachmentsInner>;
+    'attachments'?: Array<BotInsertDataActionsInnerAllOfMessageAttachmentsInner>;
     /**
      * 
      * @type {string}
@@ -2881,10 +2861,10 @@ export interface BotInsertDataNotesInner {
     'textStyles'?: { [key: string]: any; } | null;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
      * @memberof BotInsertDataNotesInner
      */
-    'position': BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
+    'position': BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
     /**
      * 
      * @type {boolean}
@@ -3364,10 +3344,10 @@ export interface BotNodeEventDataOneOf3 {
     'type': BotNodeEventDataOneOf3TypeEnum;
     /**
      * 
-     * @type {BotNodeEventDataOneOfDataAllOf1MessageInput}
+     * @type {BotNodeEventDataOneOfDataAllOfMessageInput}
      * @memberof BotNodeEventDataOneOf3
      */
-    'data': BotNodeEventDataOneOfDataAllOf1MessageInput;
+    'data': BotNodeEventDataOneOfDataAllOfMessageInput;
     /**
      * 
      * @type {string}
@@ -3414,10 +3394,10 @@ export interface BotNodeEventDataOneOf4 {
     'type': BotNodeEventDataOneOf4TypeEnum;
     /**
      * 
-     * @type {BotNodeEventDataOneOfDataAllOf1MessageDelaysInner}
+     * @type {BotNodeEventDataOneOfDataAllOfMessageDelaysInner}
      * @memberof BotNodeEventDataOneOf4
      */
-    'data': BotNodeEventDataOneOfDataAllOf1MessageDelaysInner;
+    'data': BotNodeEventDataOneOfDataAllOfMessageDelaysInner;
     /**
      * 
      * @type {string}
@@ -3464,10 +3444,10 @@ export interface BotNodeEventDataOneOf5 {
     'type': BotNodeEventDataOneOf5TypeEnum;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction}
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction}
      * @memberof BotNodeEventDataOneOf5
      */
-    'data': BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction;
+    'data': BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction;
     /**
      * 
      * @type {BotNodeEventDataOneOf5Handle}
@@ -3591,10 +3571,10 @@ export interface BotNodeEventDataOneOf6Data {
     'url': string;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
      * @memberof BotNodeEventDataOneOf6Data
      */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
 }
 /**
  * 
@@ -3654,10 +3634,10 @@ export interface BotNodeEventDataOneOf7Data {
     'phoneNumber': string;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
      * @memberof BotNodeEventDataOneOf7Data
      */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
 }
 /**
  * 
@@ -3673,10 +3653,10 @@ export interface BotNodeEventDataOneOf8 {
     'type': BotNodeEventDataOneOf8TypeEnum;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionDefaultActionAllOf}
+     * @type {BotNodeEventDataOneOf8Data}
      * @memberof BotNodeEventDataOneOf8
      */
-    'data': BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextActionDefaultActionAllOf;
+    'data': BotNodeEventDataOneOf8Data;
     /**
      * 
      * @type {BotNodeEventDataOneOfData}
@@ -3753,6 +3733,31 @@ export type BotNodeEventDataOneOf8ConditionSourceTargetEnum = typeof BotNodeEven
 /**
  * 
  * @export
+ * @interface BotNodeEventDataOneOf8Data
+ */
+export interface BotNodeEventDataOneOf8Data {
+    /**
+     * 
+     * @type {string}
+     * @memberof BotNodeEventDataOneOf8Data
+     */
+    'triggerActionId': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BotNodeEventDataOneOf8Data
+     */
+    'triggerBotId'?: string;
+    /**
+     * 
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
+     * @memberof BotNodeEventDataOneOf8Data
+     */
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
+}
+/**
+ * 
+ * @export
  * @interface BotNodeEventDataOneOf9
  */
 export interface BotNodeEventDataOneOf9 {
@@ -3796,10 +3801,10 @@ export interface BotNodeEventDataOneOf9Data {
     'id'?: string;
     /**
      * 
-     * @type {Array<BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInner>}
+     * @type {Array<BotNodeEventDataOneOfDataAllOfMessageAttachmentsInner>}
      * @memberof BotNodeEventDataOneOf9Data
      */
-    'attachments'?: Array<BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInner>;
+    'attachments'?: Array<BotNodeEventDataOneOfDataAllOfMessageAttachmentsInner>;
     /**
      * 
      * @type {string}
@@ -3862,10 +3867,10 @@ export interface BotNodeEventDataOneOf9Data {
     'textStyles'?: { [key: string]: any; } | null;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
      * @memberof BotNodeEventDataOneOf9Data
      */
-    'position': BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
+    'position': BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
     /**
      * 
      * @type {boolean}
@@ -3911,10 +3916,10 @@ export interface BotNodeEventDataOneOfData {
     'name': string;
     /**
      * 
-     * @type {BotNodeEventDataOneOfDataAllOf1Message}
+     * @type {BotNodeEventDataOneOfDataAllOfMessage}
      * @memberof BotNodeEventDataOneOfData
      */
-    'message'?: BotNodeEventDataOneOfDataAllOf1Message | null;
+    'message'?: BotNodeEventDataOneOfDataAllOfMessage | null;
     /**
      * set the assignee on the contact
      * @type {string}
@@ -3923,10 +3928,10 @@ export interface BotNodeEventDataOneOfData {
     'assignee'?: string | null;
     /**
      * Tags to set on this contact.
-     * @type {Array<BotInsertDataActionsInnerAllOf1TagsInner>}
+     * @type {Array<BotInsertDataActionsInnerAllOfTagsInner>}
      * @memberof BotNodeEventDataOneOfData
      */
-    'tags'?: Array<BotInsertDataActionsInnerAllOf1TagsInner> | null;
+    'tags'?: Array<BotInsertDataActionsInnerAllOfTagsInner> | null;
     /**
      * Array of UserId
      * @type {Array<string>}
@@ -3942,22 +3947,22 @@ export interface BotNodeEventDataOneOfData {
     'webhooks'?: Array<string> | null;
     /**
      * 
-     * @type {Array<BotInsertDataActionsInnerAllOf1HttpRequestInner>}
+     * @type {Array<BotInsertDataActionsInnerAllOfHttpRequestInner>}
      * @memberof BotNodeEventDataOneOfData
      */
-    'httpRequest'?: Array<BotInsertDataActionsInnerAllOf1HttpRequestInner> | null;
+    'httpRequest'?: Array<BotInsertDataActionsInnerAllOfHttpRequestInner> | null;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
      * @memberof BotNodeEventDataOneOfData
      */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
      * @memberof BotNodeEventDataOneOfData
      */
-    'actionPosition'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
+    'actionPosition'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
     /**
      * send in to remove the action
      * @type {boolean}
@@ -3966,16 +3971,16 @@ export interface BotNodeEventDataOneOfData {
     'remove'?: boolean;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1FormRef}
+     * @type {BotInsertDataActionsInnerAllOfFormRef}
      * @memberof BotNodeEventDataOneOfData
      */
-    'formRef'?: BotInsertDataActionsInnerAllOf1FormRef | null;
+    'formRef'?: BotInsertDataActionsInnerAllOfFormRef | null;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1FormActionMetadata}
+     * @type {BotInsertDataActionsInnerAllOfFormActionMetadata}
      * @memberof BotNodeEventDataOneOfData
      */
-    'formActionMetadata'?: BotInsertDataActionsInnerAllOf1FormActionMetadata | null;
+    'formActionMetadata'?: BotInsertDataActionsInnerAllOfFormActionMetadata | null;
     /**
      * Type of the message being sent
      * @type {string}
@@ -3990,10 +3995,10 @@ export interface BotNodeEventDataOneOfData {
     'accountId'?: string;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1ZapierAction}
+     * @type {BotInsertDataActionsInnerAllOfZapierAction}
      * @memberof BotNodeEventDataOneOfData
      */
-    'zapierAction'?: BotInsertDataActionsInnerAllOf1ZapierAction | null;
+    'zapierAction'?: BotInsertDataActionsInnerAllOfZapierAction | null;
 }
 
 export const BotNodeEventDataOneOfDataMessageTypeEnum = {
@@ -4006,252 +4011,115 @@ export type BotNodeEventDataOneOfDataMessageTypeEnum = typeof BotNodeEventDataOn
 /**
  * 
  * @export
- * @interface BotNodeEventDataOneOfDataAllOf
+ * @interface BotNodeEventDataOneOfDataAllOfMessage
  */
-export interface BotNodeEventDataOneOfDataAllOf {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf
-     */
-    'createdAt': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf
-     */
-    'updatedAt': string;
-}
-/**
- * 
- * @export
- * @interface BotNodeEventDataOneOfDataAllOf1
- */
-export interface BotNodeEventDataOneOfDataAllOf1 {
-    /**
-     * 
-     * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1
-     */
-    'id'?: string;
-    /**
-     * 
-     * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1
-     */
-    'botId'?: string;
-    /**
-     * Name of the template
-     * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1
-     */
-    'name'?: string;
-    /**
-     * 
-     * @type {BotNodeEventDataOneOfDataAllOf1Message}
-     * @memberof BotNodeEventDataOneOfDataAllOf1
-     */
-    'message'?: BotNodeEventDataOneOfDataAllOf1Message | null;
-    /**
-     * set the assignee on the contact
-     * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1
-     */
-    'assignee'?: string | null;
-    /**
-     * Tags to set on this contact.
-     * @type {Array<BotInsertDataActionsInnerAllOf1TagsInner>}
-     * @memberof BotNodeEventDataOneOfDataAllOf1
-     */
-    'tags'?: Array<BotInsertDataActionsInnerAllOf1TagsInner> | null;
-    /**
-     * Array of UserId
-     * @type {Array<string>}
-     * @memberof BotNodeEventDataOneOfDataAllOf1
-     */
-    'notifyUsers'?: Array<string> | null;
-    /**
-     * 
-     * @type {Array<string>}
-     * @memberof BotNodeEventDataOneOfDataAllOf1
-     * @deprecated
-     */
-    'webhooks'?: Array<string> | null;
-    /**
-     * 
-     * @type {Array<BotInsertDataActionsInnerAllOf1HttpRequestInner>}
-     * @memberof BotNodeEventDataOneOfDataAllOf1
-     */
-    'httpRequest'?: Array<BotInsertDataActionsInnerAllOf1HttpRequestInner> | null;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotNodeEventDataOneOfDataAllOf1
-     */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotNodeEventDataOneOfDataAllOf1
-     */
-    'actionPosition'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
-    /**
-     * send in to remove the action
-     * @type {boolean}
-     * @memberof BotNodeEventDataOneOfDataAllOf1
-     */
-    'remove'?: boolean;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1FormRef}
-     * @memberof BotNodeEventDataOneOfDataAllOf1
-     */
-    'formRef'?: BotInsertDataActionsInnerAllOf1FormRef | null;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1FormActionMetadata}
-     * @memberof BotNodeEventDataOneOfDataAllOf1
-     */
-    'formActionMetadata'?: BotInsertDataActionsInnerAllOf1FormActionMetadata | null;
-    /**
-     * Type of the message being sent
-     * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1
-     */
-    'messageType'?: BotNodeEventDataOneOfDataAllOf1MessageTypeEnum;
-    /**
-     * Account ID of the sender
-     * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1
-     */
-    'accountId'?: string;
-    /**
-     * 
-     * @type {BotInsertDataActionsInnerAllOf1ZapierAction}
-     * @memberof BotNodeEventDataOneOfDataAllOf1
-     */
-    'zapierAction'?: BotInsertDataActionsInnerAllOf1ZapierAction | null;
-}
-
-export const BotNodeEventDataOneOfDataAllOf1MessageTypeEnum = {
-    Message: 'message',
-    Email: 'email'
-} as const;
-
-export type BotNodeEventDataOneOfDataAllOf1MessageTypeEnum = typeof BotNodeEventDataOneOfDataAllOf1MessageTypeEnum[keyof typeof BotNodeEventDataOneOfDataAllOf1MessageTypeEnum];
-
-/**
- * 
- * @export
- * @interface BotNodeEventDataOneOfDataAllOf1Message
- */
-export interface BotNodeEventDataOneOfDataAllOf1Message {
+export interface BotNodeEventDataOneOfDataAllOfMessage {
     /**
      * the template message itself
      * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1Message
+     * @memberof BotNodeEventDataOneOfDataAllOfMessage
      */
     'text': string | null;
     /**
      * array of attachments for the template
-     * @type {Array<BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInner>}
-     * @memberof BotNodeEventDataOneOfDataAllOf1Message
+     * @type {Array<BotNodeEventDataOneOfDataAllOfMessageAttachmentsInner>}
+     * @memberof BotNodeEventDataOneOfDataAllOfMessage
      */
-    'attachments'?: Array<BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInner>;
+    'attachments'?: Array<BotNodeEventDataOneOfDataAllOfMessageAttachmentsInner>;
     /**
      * 
-     * @type {Array<BotInsertDataActionsInnerAllOf1MessageButtonsInner>}
-     * @memberof BotNodeEventDataOneOfDataAllOf1Message
+     * @type {Array<BotInsertDataActionsInnerAllOfMessageButtonsInner>}
+     * @memberof BotNodeEventDataOneOfDataAllOfMessage
      */
-    'buttons'?: Array<BotInsertDataActionsInnerAllOf1MessageButtonsInner>;
+    'buttons'?: Array<BotInsertDataActionsInnerAllOfMessageButtonsInner>;
     /**
      * 
-     * @type {Array<BotNodeEventDataOneOfDataAllOf1MessageDelaysInner>}
-     * @memberof BotNodeEventDataOneOfDataAllOf1Message
+     * @type {Array<BotNodeEventDataOneOfDataAllOfMessageDelaysInner>}
+     * @memberof BotNodeEventDataOneOfDataAllOfMessage
      */
-    'delays'?: Array<BotNodeEventDataOneOfDataAllOf1MessageDelaysInner>;
+    'delays'?: Array<BotNodeEventDataOneOfDataAllOfMessageDelaysInner>;
     /**
      * 
-     * @type {BotNodeEventDataOneOfDataAllOf1MessageInput}
-     * @memberof BotNodeEventDataOneOfDataAllOf1Message
+     * @type {BotNodeEventDataOneOfDataAllOfMessageInput}
+     * @memberof BotNodeEventDataOneOfDataAllOfMessage
      */
-    'input'?: BotNodeEventDataOneOfDataAllOf1MessageInput;
+    'input'?: BotNodeEventDataOneOfDataAllOfMessageInput;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageList}
-     * @memberof BotNodeEventDataOneOfDataAllOf1Message
+     * @type {BotInsertDataActionsInnerAllOfMessageList}
+     * @memberof BotNodeEventDataOneOfDataAllOfMessage
      */
-    'list'?: BotInsertDataActionsInnerAllOf1MessageList;
+    'list'?: BotInsertDataActionsInnerAllOfMessageList;
     /**
      * 
      * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1Message
+     * @memberof BotNodeEventDataOneOfDataAllOfMessage
      */
     'quoted'?: string;
     /**
      * 
-     * @type {Array<BotInsertDataActionsInnerAllOf1MessageProductsInner>}
-     * @memberof BotNodeEventDataOneOfDataAllOf1Message
+     * @type {Array<BotInsertDataActionsInnerAllOfMessageProductsInner>}
+     * @memberof BotNodeEventDataOneOfDataAllOfMessage
      */
-    'products'?: Array<BotInsertDataActionsInnerAllOf1MessageProductsInner>;
+    'products'?: Array<BotInsertDataActionsInnerAllOfMessageProductsInner>;
     /**
      * the subject of the message, if applicable
      * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1Message
+     * @memberof BotNodeEventDataOneOfDataAllOfMessage
      */
     'subject'?: string;
 }
 /**
  * 
  * @export
- * @interface BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInner
+ * @interface BotNodeEventDataOneOfDataAllOfMessageAttachmentsInner
  */
-export interface BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInner {
+export interface BotNodeEventDataOneOfDataAllOfMessageAttachmentsInner {
     /**
      * 
      * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInner
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageAttachmentsInner
      */
-    'type': BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInnerTypeEnum;
+    'type': BotNodeEventDataOneOfDataAllOfMessageAttachmentsInnerTypeEnum;
     /**
      * 
      * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInner
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageAttachmentsInner
      */
     'mimetype': string;
     /**
      * 
      * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInner
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageAttachmentsInner
      */
     'url': string;
     /**
      * 
      * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInner
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageAttachmentsInner
      */
     'jpegThumbnail'?: string | null;
     /**
      * 
      * @type {number}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInner
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageAttachmentsInner
      */
     'seconds'?: number;
     /**
      * 
      * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInner
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageAttachmentsInner
      */
     'filename'?: string;
     /**
      * 
      * @type {boolean}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInner
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageAttachmentsInner
      */
     'pttAudio'?: boolean;
 }
 
-export const BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInnerTypeEnum = {
+export const BotNodeEventDataOneOfDataAllOfMessageAttachmentsInnerTypeEnum = {
     Image: 'image',
     Video: 'video',
     Contact: 'contact',
@@ -4261,122 +4129,122 @@ export const BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInnerTypeEnum = {
     Location: 'location'
 } as const;
 
-export type BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInnerTypeEnum = typeof BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInnerTypeEnum[keyof typeof BotNodeEventDataOneOfDataAllOf1MessageAttachmentsInnerTypeEnum];
+export type BotNodeEventDataOneOfDataAllOfMessageAttachmentsInnerTypeEnum = typeof BotNodeEventDataOneOfDataAllOfMessageAttachmentsInnerTypeEnum[keyof typeof BotNodeEventDataOneOfDataAllOfMessageAttachmentsInnerTypeEnum];
 
 /**
  * 
  * @export
- * @interface BotNodeEventDataOneOfDataAllOf1MessageDelaysInner
+ * @interface BotNodeEventDataOneOfDataAllOfMessageDelaysInner
  */
-export interface BotNodeEventDataOneOfDataAllOf1MessageDelaysInner {
+export interface BotNodeEventDataOneOfDataAllOfMessageDelaysInner {
     /**
      * Time delays on second
      * @type {number}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageDelaysInner
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageDelaysInner
      */
     'timeDelaySec': number;
     /**
      * Use \"nextAction\" instead
      * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageDelaysInner
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageDelaysInner
      * @deprecated
      */
     'triggerActionId'?: string;
     /**
      * 
      * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageDelaysInner
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageDelaysInner
      */
     'triggerBotId'?: string | null;
     /**
      * Simulate typing
      * @type {boolean}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageDelaysInner
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageDelaysInner
      */
     'simulateTyping'?: boolean;
     /**
      * If true, the message will be cancelled if a reply is received
      * @type {boolean}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageDelaysInner
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageDelaysInner
      */
     'cancelIfReplyReceived'?: boolean;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageDelaysInner
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageDelaysInner
      */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageDelaysInner
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction}
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageDelaysInner
      */
-    'nextAction'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction;
+    'nextAction'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction;
 }
 /**
  * 
  * @export
- * @interface BotNodeEventDataOneOfDataAllOf1MessageInput
+ * @interface BotNodeEventDataOneOfDataAllOfMessageInput
  */
-export interface BotNodeEventDataOneOfDataAllOf1MessageInput {
+export interface BotNodeEventDataOneOfDataAllOfMessageInput {
     /**
      * Name of the input
      * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageInput
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageInput
      */
     'name': string;
     /**
      * 
-     * @type {BotNodeEventDataOneOfDataAllOf1MessageInputValidation}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageInput
+     * @type {BotNodeEventDataOneOfDataAllOfMessageInputValidation}
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageInput
      */
-    'validation'?: BotNodeEventDataOneOfDataAllOf1MessageInputValidation;
+    'validation'?: BotNodeEventDataOneOfDataAllOfMessageInputValidation;
     /**
      * Use \"nextAction\" instead
      * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageInput
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageInput
      * @deprecated
      */
     'triggerActionId'?: string | null;
     /**
      * 
      * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageInput
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageInput
      */
     'triggerBotId'?: string | null;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageInput
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction}
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageInput
      */
-    'nextAction'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerNextAction;
+    'nextAction'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerNextAction;
     /**
      * 
-     * @type {BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageInput
+     * @type {BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition}
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageInput
      */
-    'position'?: BotInsertDataActionsInnerAllOf1MessageButtonsInnerPosition | null;
+    'position'?: BotInsertDataActionsInnerAllOfMessageButtonsInnerPosition | null;
 }
 /**
  * 
  * @export
- * @interface BotNodeEventDataOneOfDataAllOf1MessageInputValidation
+ * @interface BotNodeEventDataOneOfDataAllOfMessageInputValidation
  */
-export interface BotNodeEventDataOneOfDataAllOf1MessageInputValidation {
+export interface BotNodeEventDataOneOfDataAllOfMessageInputValidation {
     /**
      * 
      * @type {string}
-     * @memberof BotNodeEventDataOneOfDataAllOf1MessageInputValidation
+     * @memberof BotNodeEventDataOneOfDataAllOfMessageInputValidation
      */
-    'type': BotNodeEventDataOneOfDataAllOf1MessageInputValidationTypeEnum;
+    'type': BotNodeEventDataOneOfDataAllOfMessageInputValidationTypeEnum;
 }
 
-export const BotNodeEventDataOneOfDataAllOf1MessageInputValidationTypeEnum = {
+export const BotNodeEventDataOneOfDataAllOfMessageInputValidationTypeEnum = {
     String: 'string',
     Integer: 'integer'
 } as const;
 
-export type BotNodeEventDataOneOfDataAllOf1MessageInputValidationTypeEnum = typeof BotNodeEventDataOneOfDataAllOf1MessageInputValidationTypeEnum[keyof typeof BotNodeEventDataOneOfDataAllOf1MessageInputValidationTypeEnum];
+export type BotNodeEventDataOneOfDataAllOfMessageInputValidationTypeEnum = typeof BotNodeEventDataOneOfDataAllOfMessageInputValidationTypeEnum[keyof typeof BotNodeEventDataOneOfDataAllOfMessageInputValidationTypeEnum];
 
 /**
  * 
@@ -4630,6 +4498,12 @@ export interface CallDeleteData {
      * @memberof CallDeleteData
      */
     'phoneNumber': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallDeleteData
+     */
+    'callId': string;
 }
 /**
  * 
@@ -4674,7 +4548,13 @@ export interface CallInsertData {
      * @type {string}
      * @memberof CallInsertData
      */
-    'teamId'?: string;
+    'teamId': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallInsertData
+     */
+    'chatId'?: string;
     /**
      * 
      * @type {string}
@@ -4723,7 +4603,79 @@ export interface CallInsertData {
      * @memberof CallInsertData
      */
     'callNotes'?: string | null;
+    /**
+     * 
+     * @type {CallInsertDataTranscription}
+     * @memberof CallInsertData
+     */
+    'transcription'?: CallInsertDataTranscription | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallInsertData
+     */
+    'status'?: CallInsertDataStatusEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallInsertData
+     */
+    'messageId'?: string;
 }
+
+export const CallInsertDataStatusEnum = {
+    Queued: 'queued',
+    Ringing: 'ringing',
+    InProgress: 'in-progress',
+    Completed: 'completed',
+    Busy: 'busy',
+    Failed: 'failed',
+    NoAnswer: 'no-answer',
+    Cancelled: 'cancelled'
+} as const;
+
+export type CallInsertDataStatusEnum = typeof CallInsertDataStatusEnum[keyof typeof CallInsertDataStatusEnum];
+
+/**
+ * 
+ * @export
+ * @interface CallInsertDataTranscription
+ */
+export interface CallInsertDataTranscription {
+    /**
+     * 
+     * @type {string}
+     * @memberof CallInsertDataTranscription
+     */
+    'text'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallInsertDataTranscription
+     */
+    'error'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallInsertDataTranscription
+     */
+    'status': CallInsertDataTranscriptionStatusEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallInsertDataTranscription
+     */
+    'jobId'?: string;
+}
+
+export const CallInsertDataTranscriptionStatusEnum = {
+    InProgress: 'in-progress',
+    Completed: 'completed',
+    Failed: 'failed'
+} as const;
+
+export type CallInsertDataTranscriptionStatusEnum = typeof CallInsertDataTranscriptionStatusEnum[keyof typeof CallInsertDataTranscriptionStatusEnum];
+
 /**
  * 
  * @export
@@ -4773,6 +4725,12 @@ export interface CallUpdateData {
      * @type {string}
      * @memberof CallUpdateData
      */
+    'chatId'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallUpdateData
+     */
     'phoneNumber': string;
     /**
      * 
@@ -4797,7 +4755,7 @@ export interface CallUpdateData {
      * @type {string}
      * @memberof CallUpdateData
      */
-    'callId'?: string;
+    'callId': string;
     /**
      * 
      * @type {string}
@@ -4816,7 +4774,39 @@ export interface CallUpdateData {
      * @memberof CallUpdateData
      */
     'callNotes'?: string | null;
+    /**
+     * 
+     * @type {CallInsertDataTranscription}
+     * @memberof CallUpdateData
+     */
+    'transcription'?: CallInsertDataTranscription | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallUpdateData
+     */
+    'status'?: CallUpdateDataStatusEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallUpdateData
+     */
+    'messageId'?: string;
 }
+
+export const CallUpdateDataStatusEnum = {
+    Queued: 'queued',
+    Ringing: 'ringing',
+    InProgress: 'in-progress',
+    Completed: 'completed',
+    Busy: 'busy',
+    Failed: 'failed',
+    NoAnswer: 'no-answer',
+    Cancelled: 'cancelled'
+} as const;
+
+export type CallUpdateDataStatusEnum = typeof CallUpdateDataStatusEnum[keyof typeof CallUpdateDataStatusEnum];
+
 /**
  * 
  * @export
@@ -4912,6 +4902,12 @@ export interface CallchannelInsertData {
      * @memberof CallchannelInsertData
      */
     'userId'?: string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof CallchannelInsertData
+     */
+    'purchasedNumber'?: boolean;
 }
 /**
  * 
@@ -4969,6 +4965,12 @@ export interface CallchannelUpdateData {
      * @memberof CallchannelUpdateData
      */
     'userId'?: string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof CallchannelUpdateData
+     */
+    'purchasedNumber'?: boolean;
 }
 /**
  * 
@@ -5636,121 +5638,6 @@ export type ChatbotInsertDataTrainingStatusEnum = typeof ChatbotInsertDataTraini
 /**
  * 
  * @export
- * @interface ChatbotInsertDataAllOf
- */
-export interface ChatbotInsertDataAllOf {
-    /**
-     * ID of the chatbot
-     * @type {string}
-     * @memberof ChatbotInsertDataAllOf
-     */
-    'id': string;
-    /**
-     * 
-     * @type {Array<ChatbotInsertDataAllOfDocuments>}
-     * @memberof ChatbotInsertDataAllOf
-     */
-    'documents'?: Array<ChatbotInsertDataAllOfDocuments>;
-    /**
-     * An ISO formatted timestamp
-     * @type {string}
-     * @memberof ChatbotInsertDataAllOf
-     */
-    'createdAt': string;
-    /**
-     * An ISO formatted timestamp
-     * @type {string}
-     * @memberof ChatbotInsertDataAllOf
-     */
-    'updatedAt': string;
-    /**
-     * Current training status of the chatbot
-     * @type {string}
-     * @memberof ChatbotInsertDataAllOf
-     */
-    'trainingStatus': ChatbotInsertDataAllOfTrainingStatusEnum;
-    /**
-     * Progress of training, between 0 and 100
-     * @type {number}
-     * @memberof ChatbotInsertDataAllOf
-     */
-    'trainingProgress'?: number;
-    /**
-     * 
-     * @type {Array<ChatbotInsertDataAllOfJobs>}
-     * @memberof ChatbotInsertDataAllOf
-     */
-    'jobs'?: Array<ChatbotInsertDataAllOfJobs>;
-}
-
-export const ChatbotInsertDataAllOfTrainingStatusEnum = {
-    Pending: 'pending',
-    Running: 'running',
-    Finished: 'finished',
-    Failed: 'failed',
-    Aborted: 'aborted'
-} as const;
-
-export type ChatbotInsertDataAllOfTrainingStatusEnum = typeof ChatbotInsertDataAllOfTrainingStatusEnum[keyof typeof ChatbotInsertDataAllOfTrainingStatusEnum];
-
-/**
- * 
- * @export
- * @interface ChatbotInsertDataAllOf1
- */
-export interface ChatbotInsertDataAllOf1 {
-    /**
-     * Name of the chatbot
-     * @type {string}
-     * @memberof ChatbotInsertDataAllOf1
-     */
-    'name'?: string;
-    /**
-     * Fallback message of the chatbot
-     * @type {string}
-     * @memberof ChatbotInsertDataAllOf1
-     */
-    'fallbackMessage'?: string;
-    /**
-     * Prompt message of the chatbot
-     * @type {string}
-     * @memberof ChatbotInsertDataAllOf1
-     */
-    'prompt'?: string;
-    /**
-     * Name of the member to assign to the chatbot
-     * @type {string}
-     * @memberof ChatbotInsertDataAllOf1
-     */
-    'assignedMember'?: string | null;
-    /**
-     * Name of the channel to deploy to the chatbot
-     * @type {string}
-     * @memberof ChatbotInsertDataAllOf1
-     */
-    'deployedAccount'?: string | null;
-    /**
-     * Use this chatbot as an AI assistant. Only one chatbot can be used as an AI assistant per team
-     * @type {boolean}
-     * @memberof ChatbotInsertDataAllOf1
-     */
-    'useAsAiAssistant'?: boolean;
-    /**
-     * Whether the chatbot is enabled to send messages to the deployed account
-     * @type {boolean}
-     * @memberof ChatbotInsertDataAllOf1
-     */
-    'enableAccountDeployment'?: boolean;
-    /**
-     * Should generated responses include the source of the data
-     * @type {boolean}
-     * @memberof ChatbotInsertDataAllOf1
-     */
-    'includeSourceInResponse'?: boolean;
-}
-/**
- * 
- * @export
  * @interface ChatbotInsertDataAllOfDocuments
  */
 export interface ChatbotInsertDataAllOfDocuments {
@@ -6314,49 +6201,6 @@ export interface CredittransactionrecordInsertData {
 /**
  * 
  * @export
- * @interface CredittransactionrecordInsertDataAllOf
- */
-export interface CredittransactionrecordInsertDataAllOf {
-    /**
-     * ID of a credit consumption. IDs are chronological.
-     * @type {string}
-     * @memberof CredittransactionrecordInsertDataAllOf
-     */
-    'id': string;
-    /**
-     * Number of units consumed/credited. Positive for credit, negative for consumption.
-     * @type {number}
-     * @memberof CredittransactionrecordInsertDataAllOf
-     */
-    'units': number;
-    /**
-     * The ID of a user
-     * @type {string}
-     * @memberof CredittransactionrecordInsertDataAllOf
-     */
-    'doneBy': string;
-    /**
-     * An ISO formatted timestamp
-     * @type {string}
-     * @memberof CredittransactionrecordInsertDataAllOf
-     */
-    'createdAt': string;
-    /**
-     * The ID of the object that was consumed, or the ID of the gain that created this tx record. (createdAt, objectId) will be enforced to be unique.
-     * @type {string}
-     * @memberof CredittransactionrecordInsertDataAllOf
-     */
-    'objectId': string;
-    /**
-     * 
-     * @type {CredittransactionrecordInsertDataAllOfMetadata}
-     * @memberof CredittransactionrecordInsertDataAllOf
-     */
-    'metadata'?: CredittransactionrecordInsertDataAllOfMetadata | null;
-}
-/**
- * 
- * @export
  * @interface CredittransactionrecordInsertDataAllOfMetadata
  */
 export interface CredittransactionrecordInsertDataAllOfMetadata {
@@ -6496,22 +6340,22 @@ export interface CrmTicketInsertData {
     'contactId': CrmTicketInsertDataContactId;
     /**
      * 
-     * @type {GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata}
+     * @type {GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata}
      * @memberof CrmTicketInsertData
      */
-    'createMetadata': GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata;
+    'createMetadata': GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata;
     /**
      * 
-     * @type {GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata}
+     * @type {GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata}
      * @memberof CrmTicketInsertData
      */
-    'updateMetadata': GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata;
+    'updateMetadata': GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata;
     /**
      * 
-     * @type {GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata}
+     * @type {GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata}
      * @memberof CrmTicketInsertData
      */
-    'resolvedMetadata'?: GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata;
+    'resolvedMetadata'?: GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata;
     /**
      * 
      * @type {CrmTicketInsertDataTimer}
@@ -6546,16 +6390,16 @@ export interface CrmTicketInsertDataContactId {
 export interface CrmTicketInsertDataTimer {
     /**
      * 
-     * @type {GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata}
+     * @type {GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata}
      * @memberof CrmTicketInsertDataTimer
      */
-    'startMetadata': GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata;
+    'startMetadata': GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata;
     /**
      * 
-     * @type {GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata}
+     * @type {GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata}
      * @memberof CrmTicketInsertDataTimer
      */
-    'stopMetadata'?: GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata;
+    'stopMetadata'?: GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata;
     /**
      * 
      * @type {string}
@@ -6654,22 +6498,22 @@ export interface CrmTicketUpdateData {
     'contactId'?: CrmTicketInsertDataContactId;
     /**
      * 
-     * @type {GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata}
+     * @type {GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata}
      * @memberof CrmTicketUpdateData
      */
-    'createMetadata'?: GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata;
+    'createMetadata'?: GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata;
     /**
      * 
-     * @type {GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata}
+     * @type {GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata}
      * @memberof CrmTicketUpdateData
      */
-    'updateMetadata'?: GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata;
+    'updateMetadata'?: GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata;
     /**
      * 
-     * @type {GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata}
+     * @type {GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata}
      * @memberof CrmTicketUpdateData
      */
-    'resolvedMetadata'?: GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata;
+    'resolvedMetadata'?: GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata;
     /**
      * 
      * @type {CrmTicketInsertDataTimer}
@@ -6726,7 +6570,7 @@ export interface CustomerCreditsLevelUpdateData {
      * @type {string}
      * @memberof CustomerCreditsLevelUpdateData
      */
-    'creditLevelStatus': CustomerCreditsLevelUpdateDataCreditLevelStatusEnum;
+    'creditLevelStatus': CustomerCreditsLevelUpdateDataCreditLevelStatusEnum | null;
     /**
      * 
      * @type {number}
@@ -6873,49 +6717,21 @@ export interface DashboardInsertDataPermissions {
      * @type {string}
      * @memberof DashboardInsertDataPermissions
      */
-    'allMembers'?: DashboardInsertDataPermissionsAllMembersEnum;
+    'allMembers'?: DashboardInsertDataPermissionsAllMembersEnum | null;
     /**
      * 
-     * @type {Array<DashboardInsertDataPermissionsUsersInner>}
+     * @type {Array<DashboardwithdataInsertDataAllOfPermissionsAllMembers>}
      * @memberof DashboardInsertDataPermissions
      */
-    'users'?: Array<DashboardInsertDataPermissionsUsersInner>;
+    'users'?: Array<DashboardwithdataInsertDataAllOfPermissionsAllMembers>;
 }
 
 export const DashboardInsertDataPermissionsAllMembersEnum = {
     Lvl1View: 'lvl1_view',
-    Lvl2Edit: 'lvl2_edit',
-    Null: null as null
-} as const;
-
-export type DashboardInsertDataPermissionsAllMembersEnum = typeof DashboardInsertDataPermissionsAllMembersEnum[keyof typeof DashboardInsertDataPermissionsAllMembersEnum];
-
-/**
- * 
- * @export
- * @interface DashboardInsertDataPermissionsUsersInner
- */
-export interface DashboardInsertDataPermissionsUsersInner {
-    /**
-     * 
-     * @type {string}
-     * @memberof DashboardInsertDataPermissionsUsersInner
-     */
-    'id': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof DashboardInsertDataPermissionsUsersInner
-     */
-    'access': DashboardInsertDataPermissionsUsersInnerAccessEnum;
-}
-
-export const DashboardInsertDataPermissionsUsersInnerAccessEnum = {
-    Lvl1View: 'lvl1_view',
     Lvl2Edit: 'lvl2_edit'
 } as const;
 
-export type DashboardInsertDataPermissionsUsersInnerAccessEnum = typeof DashboardInsertDataPermissionsUsersInnerAccessEnum[keyof typeof DashboardInsertDataPermissionsUsersInnerAccessEnum];
+export type DashboardInsertDataPermissionsAllMembersEnum = typeof DashboardInsertDataPermissionsAllMembersEnum[keyof typeof DashboardInsertDataPermissionsAllMembersEnum];
 
 /**
  * 
@@ -6935,6 +6751,12 @@ export interface DashboardInsertDataSchema {
      * @memberof DashboardInsertDataSchema
      */
     'items': Array<DashboardInsertDataSchemaItemsInner>;
+    /**
+     * 
+     * @type {DashboardInsertDataSchemaLayout}
+     * @memberof DashboardInsertDataSchema
+     */
+    'layout'?: DashboardInsertDataSchemaLayout;
 }
 
 export const DashboardInsertDataSchemaVersionEnum = {
@@ -7033,6 +6855,76 @@ export interface DashboardInsertDataSchemaItemsInnerOneOf1 {
      * @memberof DashboardInsertDataSchemaItemsInnerOneOf1
      */
     'title': string;
+}
+/**
+ * 
+ * @export
+ * @interface DashboardInsertDataSchemaLayout
+ */
+export interface DashboardInsertDataSchemaLayout {
+    /**
+     * 
+     * @type {Array<DashboardInsertDataSchemaLayoutXlInner>}
+     * @memberof DashboardInsertDataSchemaLayout
+     */
+    'xl': Array<DashboardInsertDataSchemaLayoutXlInner>;
+    /**
+     * 
+     * @type {Array<DashboardInsertDataSchemaLayoutXlInner>}
+     * @memberof DashboardInsertDataSchemaLayout
+     */
+    'lg': Array<DashboardInsertDataSchemaLayoutXlInner>;
+    /**
+     * 
+     * @type {Array<DashboardInsertDataSchemaLayoutXlInner>}
+     * @memberof DashboardInsertDataSchemaLayout
+     */
+    'md': Array<DashboardInsertDataSchemaLayoutXlInner>;
+    /**
+     * 
+     * @type {Array<DashboardInsertDataSchemaLayoutXlInner>}
+     * @memberof DashboardInsertDataSchemaLayout
+     */
+    'sm': Array<DashboardInsertDataSchemaLayoutXlInner>;
+}
+/**
+ * 
+ * @export
+ * @interface DashboardInsertDataSchemaLayoutXlInner
+ */
+export interface DashboardInsertDataSchemaLayoutXlInner {
+    [key: string]: any;
+
+    /**
+     * 
+     * @type {string}
+     * @memberof DashboardInsertDataSchemaLayoutXlInner
+     */
+    'i': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof DashboardInsertDataSchemaLayoutXlInner
+     */
+    'x': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof DashboardInsertDataSchemaLayoutXlInner
+     */
+    'y': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof DashboardInsertDataSchemaLayoutXlInner
+     */
+    'w': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof DashboardInsertDataSchemaLayoutXlInner
+     */
+    'h': number;
 }
 /**
  * 
@@ -7159,209 +7051,134 @@ export interface DashboardwithdataInsertData {
     'permissions'?: DashboardwithdataInsertDataAllOfPermissions;
     /**
      * 
-     * @type {Array<DashboardwithdataInsertDataAllOf1DataV2Inner>}
+     * @type {Array<DashboardwithdataInsertDataAllOfDataV2>}
      * @memberof DashboardwithdataInsertData
      */
-    'dataV2': Array<DashboardwithdataInsertDataAllOf1DataV2Inner>;
+    'dataV2': Array<DashboardwithdataInsertDataAllOfDataV2>;
 }
 /**
- * 
- * @export
- * @interface DashboardwithdataInsertDataAllOf
- */
-export interface DashboardwithdataInsertDataAllOf {
-    /**
-     * 
-     * @type {string}
-     * @memberof DashboardwithdataInsertDataAllOf
-     */
-    'id': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof DashboardwithdataInsertDataAllOf
-     */
-    'name': string;
-    /**
-     * An ISO formatted timestamp
-     * @type {string}
-     * @memberof DashboardwithdataInsertDataAllOf
-     */
-    'createdAt': string;
-    /**
-     * An ISO formatted timestamp
-     * @type {string}
-     * @memberof DashboardwithdataInsertDataAllOf
-     */
-    'updatedAt': string;
-    /**
-     * 
-     * @type {DashboardwithdataInsertDataAllOfSchema}
-     * @memberof DashboardwithdataInsertDataAllOf
-     */
-    'schema': DashboardwithdataInsertDataAllOfSchema;
-    /**
-     * 
-     * @type {DashboardwithdataInsertDataAllOfPermissions}
-     * @memberof DashboardwithdataInsertDataAllOf
-     */
-    'permissions'?: DashboardwithdataInsertDataAllOfPermissions;
-}
-/**
- * 
- * @export
- * @interface DashboardwithdataInsertDataAllOf1
- */
-export interface DashboardwithdataInsertDataAllOf1 {
-    /**
-     * 
-     * @type {string}
-     * @memberof DashboardwithdataInsertDataAllOf1
-     */
-    'id': string;
-    /**
-     * 
-     * @type {Array<DashboardwithdataInsertDataAllOf1DataV2Inner>}
-     * @memberof DashboardwithdataInsertDataAllOf1
-     */
-    'dataV2': Array<DashboardwithdataInsertDataAllOf1DataV2Inner>;
-}
-/**
- * @type DashboardwithdataInsertDataAllOf1DataV2Inner
+ * @type DashboardwithdataInsertDataAllOfDataV2
  * @export
  */
-export type DashboardwithdataInsertDataAllOf1DataV2Inner = DashboardwithdataInsertDataAllOf1DataV2InnerOneOf | DashboardwithdataInsertDataAllOf1DataV2InnerOneOf1;
+export type DashboardwithdataInsertDataAllOfDataV2 = DashboardwithdataInsertDataAllOfDataV2OneOf | DashboardwithdataInsertDataAllOfDataV2OneOf1;
 
 /**
  * 
  * @export
- * @interface DashboardwithdataInsertDataAllOf1DataV2InnerOneOf
+ * @interface DashboardwithdataInsertDataAllOfDataV2OneOf
  */
-export interface DashboardwithdataInsertDataAllOf1DataV2InnerOneOf {
+export interface DashboardwithdataInsertDataAllOfDataV2OneOf {
     /**
      * 
      * @type {string}
-     * @memberof DashboardwithdataInsertDataAllOf1DataV2InnerOneOf
+     * @memberof DashboardwithdataInsertDataAllOfDataV2OneOf
      */
     'id': string;
     /**
      * 
      * @type {string}
-     * @memberof DashboardwithdataInsertDataAllOf1DataV2InnerOneOf
+     * @memberof DashboardwithdataInsertDataAllOfDataV2OneOf
      */
-    'visualizationType': DashboardwithdataInsertDataAllOf1DataV2InnerOneOfVisualizationTypeEnum;
+    'visualizationType': DashboardwithdataInsertDataAllOfDataV2OneOfVisualizationTypeEnum;
     /**
      * 
-     * @type {{ [key: string]: Array<DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInner>; }}
-     * @memberof DashboardwithdataInsertDataAllOf1DataV2InnerOneOf
+     * @type {{ [key: string]: Array<DashboardwithdataInsertDataAllOfDataV2OneOfLinesValueInner>; }}
+     * @memberof DashboardwithdataInsertDataAllOfDataV2OneOf
      */
-    'lines': { [key: string]: Array<DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInner>; };
+    'lines': { [key: string]: Array<DashboardwithdataInsertDataAllOfDataV2OneOfLinesValueInner>; };
     /**
      * 
-     * @type {{ [key: string]: Array<DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInner>; }}
-     * @memberof DashboardwithdataInsertDataAllOf1DataV2InnerOneOf
+     * @type {{ [key: string]: Array<DashboardwithdataInsertDataAllOfDataV2OneOfLinesValueInner>; }}
+     * @memberof DashboardwithdataInsertDataAllOfDataV2OneOf
      */
-    'previousPeriodLines'?: { [key: string]: Array<DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInner>; };
+    'previousPeriodLines'?: { [key: string]: Array<DashboardwithdataInsertDataAllOfDataV2OneOfLinesValueInner>; };
 }
 
-export const DashboardwithdataInsertDataAllOf1DataV2InnerOneOfVisualizationTypeEnum = {
+export const DashboardwithdataInsertDataAllOfDataV2OneOfVisualizationTypeEnum = {
     Histogram: 'histogram'
 } as const;
 
-export type DashboardwithdataInsertDataAllOf1DataV2InnerOneOfVisualizationTypeEnum = typeof DashboardwithdataInsertDataAllOf1DataV2InnerOneOfVisualizationTypeEnum[keyof typeof DashboardwithdataInsertDataAllOf1DataV2InnerOneOfVisualizationTypeEnum];
+export type DashboardwithdataInsertDataAllOfDataV2OneOfVisualizationTypeEnum = typeof DashboardwithdataInsertDataAllOfDataV2OneOfVisualizationTypeEnum[keyof typeof DashboardwithdataInsertDataAllOfDataV2OneOfVisualizationTypeEnum];
 
 /**
  * 
  * @export
- * @interface DashboardwithdataInsertDataAllOf1DataV2InnerOneOf1
+ * @interface DashboardwithdataInsertDataAllOfDataV2OneOf1
  */
-export interface DashboardwithdataInsertDataAllOf1DataV2InnerOneOf1 {
+export interface DashboardwithdataInsertDataAllOfDataV2OneOf1 {
     /**
      * 
      * @type {string}
-     * @memberof DashboardwithdataInsertDataAllOf1DataV2InnerOneOf1
+     * @memberof DashboardwithdataInsertDataAllOfDataV2OneOf1
      */
     'id': string;
     /**
      * 
      * @type {string}
-     * @memberof DashboardwithdataInsertDataAllOf1DataV2InnerOneOf1
+     * @memberof DashboardwithdataInsertDataAllOfDataV2OneOf1
      */
-    'visualizationType': DashboardwithdataInsertDataAllOf1DataV2InnerOneOf1VisualizationTypeEnum;
+    'visualizationType': DashboardwithdataInsertDataAllOfDataV2OneOf1VisualizationTypeEnum;
     /**
      * 
-     * @type {{ [key: string]: DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInnerAllOf1; }}
-     * @memberof DashboardwithdataInsertDataAllOf1DataV2InnerOneOf1
+     * @type {{ [key: string]: DashboardwithdataInsertDataAllOfDataV2OneOf1ValuesValue; }}
+     * @memberof DashboardwithdataInsertDataAllOfDataV2OneOf1
      */
-    'values': { [key: string]: DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInnerAllOf1; };
+    'values': { [key: string]: DashboardwithdataInsertDataAllOfDataV2OneOf1ValuesValue; };
     /**
      * 
-     * @type {{ [key: string]: DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInnerAllOf1; }}
-     * @memberof DashboardwithdataInsertDataAllOf1DataV2InnerOneOf1
+     * @type {{ [key: string]: DashboardwithdataInsertDataAllOfDataV2OneOf1ValuesValue; }}
+     * @memberof DashboardwithdataInsertDataAllOfDataV2OneOf1
      */
-    'previousPeriodValues'?: { [key: string]: DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInnerAllOf1; };
+    'previousPeriodValues'?: { [key: string]: DashboardwithdataInsertDataAllOfDataV2OneOf1ValuesValue; };
 }
 
-export const DashboardwithdataInsertDataAllOf1DataV2InnerOneOf1VisualizationTypeEnum = {
+export const DashboardwithdataInsertDataAllOfDataV2OneOf1VisualizationTypeEnum = {
     Total: 'total'
 } as const;
 
-export type DashboardwithdataInsertDataAllOf1DataV2InnerOneOf1VisualizationTypeEnum = typeof DashboardwithdataInsertDataAllOf1DataV2InnerOneOf1VisualizationTypeEnum[keyof typeof DashboardwithdataInsertDataAllOf1DataV2InnerOneOf1VisualizationTypeEnum];
+export type DashboardwithdataInsertDataAllOfDataV2OneOf1VisualizationTypeEnum = typeof DashboardwithdataInsertDataAllOfDataV2OneOf1VisualizationTypeEnum[keyof typeof DashboardwithdataInsertDataAllOfDataV2OneOf1VisualizationTypeEnum];
 
 /**
  * 
  * @export
- * @interface DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInner
+ * @interface DashboardwithdataInsertDataAllOfDataV2OneOf1ValuesValue
  */
-export interface DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInner {
-    /**
-     * An ISO formatted timestamp
-     * @type {string}
-     * @memberof DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInner
-     */
-    'timestamp': string;
+export interface DashboardwithdataInsertDataAllOfDataV2OneOf1ValuesValue {
     /**
      * 
      * @type {number}
-     * @memberof DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInner
+     * @memberof DashboardwithdataInsertDataAllOfDataV2OneOf1ValuesValue
      */
     'value': number;
     /**
      * Number of data points in this metric. Only present for when the value is not a count 
      * @type {number}
-     * @memberof DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInner
+     * @memberof DashboardwithdataInsertDataAllOfDataV2OneOf1ValuesValue
      */
     'count'?: number;
 }
 /**
  * 
  * @export
- * @interface DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInnerAllOf
+ * @interface DashboardwithdataInsertDataAllOfDataV2OneOfLinesValueInner
  */
-export interface DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInnerAllOf {
+export interface DashboardwithdataInsertDataAllOfDataV2OneOfLinesValueInner {
     /**
      * An ISO formatted timestamp
      * @type {string}
-     * @memberof DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInnerAllOf
+     * @memberof DashboardwithdataInsertDataAllOfDataV2OneOfLinesValueInner
      */
     'timestamp': string;
-}
-/**
- * 
- * @export
- * @interface DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInnerAllOf1
- */
-export interface DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInnerAllOf1 {
     /**
      * 
      * @type {number}
-     * @memberof DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInnerAllOf1
+     * @memberof DashboardwithdataInsertDataAllOfDataV2OneOfLinesValueInner
      */
     'value': number;
     /**
      * Number of data points in this metric. Only present for when the value is not a count 
      * @type {number}
-     * @memberof DashboardwithdataInsertDataAllOf1DataV2InnerOneOfLinesValueInnerAllOf1
+     * @memberof DashboardwithdataInsertDataAllOfDataV2OneOfLinesValueInner
      */
     'count'?: number;
 }
@@ -7513,6 +7330,7 @@ export const EventName = {
     PresenceUpdate: 'presence-update',
     OrderInsert: 'order-insert',
     ActionExecute: 'action-execute',
+    ActionSchedule: 'action-schedule',
     FewMessagesLeft: 'few-messages-left',
     StaleAccountNotification: 'stale-account-notification',
     CustomerCreditsLevelUpdate: 'customer-credits-level-update',
@@ -7663,7 +7481,7 @@ export type EventSubscriptionType = typeof EventSubscriptionType[keyof typeof Ev
  * The request body you\'ll receive in a webhook
  * @export
  */
-export type EventWebhookData = AccountDelete | AccountInsert | AccountUpdate | ActionExecute | AiCreditUse | BotDelete | BotInsert | BotUpdate | CallDelete | CallInsert | CallUpdate | CallchannelDelete | CallchannelInsert | CallchannelUpdate | CampaignInsert | ChatDelete | ChatInsert | ChatUpdate | ChatbotInsert | ContactDelete | ContactInsert | ContactUpdate | CredittransactionrecordInsert | CrmTicketDelete | CrmTicketInsert | CrmTicketUpdate | CustomerCreditsLevelUpdate | DashboardDelete | DashboardInsert | DashboardUpdate | FewMessagesLeft | GroupUpdate | KeywordbasedactionInsert | MessageDelete | MessageInsert | MessageUpdate | OrderInsert | PaymentintegrationInsert | PlatformproductDelete | PlatformproductInsert | PlatformproductUpdate | PresenceUpdate | PushNotification | ShopproductInsert | StaleAccountNotification | TagDelete | TagInsert | TagUpdate | TeamDelete | TeamInsert | TeamUpdate | TeammemberDelete | TeammemberInsert | TeammemberLogout | TeammemberUpdate | TrackingDelete | TrackingInsert | TrackingUpdate | UserDelete | UserInsert | UserUpdate;
+export type EventWebhookData = AccountDelete | AccountInsert | AccountUpdate | ActionExecute | ActionSchedule | AiCreditUse | BotDelete | BotInsert | BotUpdate | CallDelete | CallInsert | CallUpdate | CallchannelDelete | CallchannelInsert | CallchannelUpdate | CampaignInsert | ChatDelete | ChatInsert | ChatUpdate | ChatbotInsert | ContactDelete | ContactInsert | ContactUpdate | CredittransactionrecordInsert | CrmTicketDelete | CrmTicketInsert | CrmTicketUpdate | CustomerCreditsLevelUpdate | DashboardDelete | DashboardInsert | DashboardUpdate | FewMessagesLeft | GroupUpdate | KeywordbasedactionInsert | MessageDelete | MessageInsert | MessageUpdate | OrderInsert | PaymentintegrationInsert | PlatformproductDelete | PlatformproductInsert | PlatformproductUpdate | PresenceUpdate | PushNotification | ShopproductInsert | StaleAccountNotification | TagDelete | TagInsert | TagUpdate | TeamDelete | TeamInsert | TeamUpdate | TeammemberDelete | TeammemberInsert | TeammemberLogout | TeammemberUpdate | TrackingDelete | TrackingInsert | TrackingUpdate | UserDelete | UserInsert | UserUpdate;
 
 /**
  * 
@@ -7755,7 +7573,7 @@ export interface GroupUpdateData {
      */
     'createdAt'?: string;
     /**
-     * 
+     * ID of the group owner
      * @type {string}
      * @memberof GroupUpdateData
      */
@@ -7947,6 +7765,12 @@ export interface GroupUpdateDataOwnerImg {
      * @memberof GroupUpdateDataOwnerImg
      */
     'fetchedAt'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof GroupUpdateDataOwnerImg
+     */
+    'fullFetchedAt'?: string;
 }
 /**
  * 
@@ -7974,113 +7798,69 @@ export interface GroupUpdateDataOwnerTagsInner {
     'remove'?: boolean;
     /**
      * 
-     * @type {GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata}
+     * @type {GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata}
      * @memberof GroupUpdateDataOwnerTagsInner
      */
-    'addedMetadata': GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata;
+    'addedMetadata': GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata;
     /**
      * 
-     * @type {GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata}
+     * @type {GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata}
      * @memberof GroupUpdateDataOwnerTagsInner
      */
-    'updatedMetadata'?: GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata;
+    'updatedMetadata'?: GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata;
 }
 /**
  * 
  * @export
- * @interface GroupUpdateDataOwnerTagsInnerAllOf
+ * @interface GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata
  */
-export interface GroupUpdateDataOwnerTagsInnerAllOf {
+export interface GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata {
     /**
      * 
      * @type {string}
-     * @memberof GroupUpdateDataOwnerTagsInnerAllOf
-     */
-    'name': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof GroupUpdateDataOwnerTagsInnerAllOf
-     */
-    'value'?: string | null;
-    /**
-     * used in events to denote that the tag has been removed
-     * @type {boolean}
-     * @memberof GroupUpdateDataOwnerTagsInnerAllOf
-     */
-    'remove'?: boolean;
-}
-/**
- * 
- * @export
- * @interface GroupUpdateDataOwnerTagsInnerAllOf1
- */
-export interface GroupUpdateDataOwnerTagsInnerAllOf1 {
-    /**
-     * 
-     * @type {GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata}
-     * @memberof GroupUpdateDataOwnerTagsInnerAllOf1
-     */
-    'addedMetadata': GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata;
-    /**
-     * 
-     * @type {GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata}
-     * @memberof GroupUpdateDataOwnerTagsInnerAllOf1
-     */
-    'updatedMetadata'?: GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata;
-}
-/**
- * 
- * @export
- * @interface GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata
- */
-export interface GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata {
-    /**
-     * 
-     * @type {string}
-     * @memberof GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata
+     * @memberof GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata
      */
     'doneAt': string;
     /**
      * 
      * @type {string}
-     * @memberof GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata
+     * @memberof GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata
      */
     'doneBy': string;
     /**
      * 
-     * @type {GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadataActor}
-     * @memberof GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata
+     * @type {GroupUpdateDataOwnerTagsInnerAllOfAddedMetadataActor}
+     * @memberof GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata
      */
-    'actor'?: GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadataActor;
+    'actor'?: GroupUpdateDataOwnerTagsInnerAllOfAddedMetadataActor;
 }
 /**
  * 
  * @export
- * @interface GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadataActor
+ * @interface GroupUpdateDataOwnerTagsInnerAllOfAddedMetadataActor
  */
-export interface GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadataActor {
+export interface GroupUpdateDataOwnerTagsInnerAllOfAddedMetadataActor {
     /**
      * 
      * @type {string}
-     * @memberof GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadataActor
+     * @memberof GroupUpdateDataOwnerTagsInnerAllOfAddedMetadataActor
      */
-    'type': GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadataActorTypeEnum;
+    'type': GroupUpdateDataOwnerTagsInnerAllOfAddedMetadataActorTypeEnum;
     /**
      * 
      * @type {string}
-     * @memberof GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadataActor
+     * @memberof GroupUpdateDataOwnerTagsInnerAllOfAddedMetadataActor
      */
     'objectId': string;
     /**
      * 
      * @type {string}
-     * @memberof GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadataActor
+     * @memberof GroupUpdateDataOwnerTagsInnerAllOfAddedMetadataActor
      */
     'objectName'?: string;
 }
 
-export const GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadataActorTypeEnum = {
+export const GroupUpdateDataOwnerTagsInnerAllOfAddedMetadataActorTypeEnum = {
     KeywordReply: 'keyword-reply',
     DefaultReply: 'default-reply',
     Campaigns: 'campaigns',
@@ -8090,7 +7870,7 @@ export const GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadataActorTypeEnum = {
     Trigger: 'trigger'
 } as const;
 
-export type GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadataActorTypeEnum = typeof GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadataActorTypeEnum[keyof typeof GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadataActorTypeEnum];
+export type GroupUpdateDataOwnerTagsInnerAllOfAddedMetadataActorTypeEnum = typeof GroupUpdateDataOwnerTagsInnerAllOfAddedMetadataActorTypeEnum[keyof typeof GroupUpdateDataOwnerTagsInnerAllOfAddedMetadataActorTypeEnum];
 
 /**
  * 
@@ -8118,10 +7898,10 @@ export interface GroupUpdateDataOwnerTicketsInner {
     'id': string;
     /**
      * 
-     * @type {GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata}
+     * @type {GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata}
      * @memberof GroupUpdateDataOwnerTicketsInner
      */
-    'createMetadata'?: GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadata;
+    'createMetadata'?: GroupUpdateDataOwnerTagsInnerAllOfAddedMetadata;
     /**
      * 
      * @type {GroupUpdateDataOwnerTicketsInnerTimer}
@@ -8180,7 +7960,7 @@ export interface GroupUpdateDataParticipantsInner {
      * @type {string}
      * @memberof GroupUpdateDataParticipantsInner
      */
-    'admin'?: GroupUpdateDataParticipantsInnerAdminEnum;
+    'admin'?: GroupUpdateDataParticipantsInnerAdminEnum | null;
 }
 
 export const GroupUpdateDataParticipantsInnerAdminEnum = {
@@ -8190,6 +7970,37 @@ export const GroupUpdateDataParticipantsInnerAdminEnum = {
 
 export type GroupUpdateDataParticipantsInnerAdminEnum = typeof GroupUpdateDataParticipantsInnerAdminEnum[keyof typeof GroupUpdateDataParticipantsInnerAdminEnum];
 
+/**
+ * 
+ * @export
+ * @interface InlineObject
+ */
+export interface InlineObject {
+    /**
+     * 
+     * @type {number}
+     * @memberof InlineObject
+     */
+    'statusCode'?: number;
+    /**
+     * Specific description of the error
+     * @type {string}
+     * @memberof InlineObject
+     */
+    'error'?: string;
+    /**
+     * What the error was
+     * @type {string}
+     * @memberof InlineObject
+     */
+    'message'?: string;
+    /**
+     * Some extra information about the error
+     * @type {object}
+     * @memberof InlineObject
+     */
+    'data'?: object;
+}
 /**
  * 
  * @export
@@ -8645,7 +8456,7 @@ export interface MessageInsertData {
      * @type {MessageInsertDataError}
      * @memberof MessageInsertData
      */
-    'error'?: MessageInsertDataError | null;
+    'error'?: MessageInsertDataError;
     /**
      * 
      * @type {string}
@@ -8690,10 +8501,22 @@ export interface MessageInsertData {
     'conversationMetadata'?: MessageInsertDataConversationMetadata;
     /**
      * 
+     * @type {MessageInsertDataTranscription}
+     * @memberof MessageInsertData
+     */
+    'transcription'?: MessageInsertDataTranscription;
+    /**
+     * 
      * @type {MessageInsertDataReactionAction}
      * @memberof MessageInsertData
      */
     'reactionAction'?: MessageInsertDataReactionAction;
+    /**
+     * 
+     * @type {MessageInsertDataReferencedPost}
+     * @memberof MessageInsertData
+     */
+    'referencedPost'?: MessageInsertDataReferencedPost;
     /**
      * 
      * @type {Array<string>}
@@ -8730,6 +8553,12 @@ export interface MessageInsertData {
      * @memberof MessageInsertData
      */
     'failDecryption'?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof MessageInsertData
+     */
+    'isComment'?: boolean;
     /**
      * 
      * @type {MessageInsertDataAction}
@@ -8999,46 +8828,39 @@ export interface MessageInsertDataConversationMetadata {
     'type': string;
 }
 /**
+ * @type MessageInsertDataError
+ * @export
+ */
+export type MessageInsertDataError = MessageInsertDataErrorOneOf | object;
+
+/**
  * 
  * @export
- * @interface MessageInsertDataError
+ * @interface MessageInsertDataErrorOneOf
  */
-export interface MessageInsertDataError {
+export interface MessageInsertDataErrorOneOf {
     /**
      * 
      * @type {number}
-     * @memberof MessageInsertDataError
+     * @memberof MessageInsertDataErrorOneOf
      */
     'statusCode': number;
     /**
      * 
      * @type {string}
-     * @memberof MessageInsertDataError
+     * @memberof MessageInsertDataErrorOneOf
      */
     'message': string;
     /**
      * 
      * @type {AccountInsertDataErrorAllOfData}
-     * @memberof MessageInsertDataError
+     * @memberof MessageInsertDataErrorOneOf
      */
     'data'?: AccountInsertDataErrorAllOfData;
     /**
-     * 
+     * Number of retries that have been attempted
      * @type {number}
-     * @memberof MessageInsertDataError
-     */
-    'retries': number;
-}
-/**
- * 
- * @export
- * @interface MessageInsertDataErrorAllOf
- */
-export interface MessageInsertDataErrorAllOf {
-    /**
-     * 
-     * @type {number}
-     * @memberof MessageInsertDataErrorAllOf
+     * @memberof MessageInsertDataErrorOneOf
      */
     'retries': number;
 }
@@ -9510,6 +9332,70 @@ export interface MessageInsertDataReactionsInner {
 /**
  * 
  * @export
+ * @interface MessageInsertDataReferencedPost
+ */
+export interface MessageInsertDataReferencedPost {
+    /**
+     * 
+     * @type {string}
+     * @memberof MessageInsertDataReferencedPost
+     */
+    'id': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof MessageInsertDataReferencedPost
+     */
+    'url': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof MessageInsertDataReferencedPost
+     */
+    'type': MessageInsertDataReferencedPostTypeEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof MessageInsertDataReferencedPost
+     */
+    'caption': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof MessageInsertDataReferencedPost
+     */
+    'liveStatus'?: MessageInsertDataReferencedPostLiveStatusEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof MessageInsertDataReferencedPost
+     */
+    'createdAt': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof MessageInsertDataReferencedPost
+     */
+    'previewUrl'?: string;
+}
+
+export const MessageInsertDataReferencedPostTypeEnum = {
+    LiveVideo: 'live_video',
+    Post: 'post',
+    Reel: 'reel'
+} as const;
+
+export type MessageInsertDataReferencedPostTypeEnum = typeof MessageInsertDataReferencedPostTypeEnum[keyof typeof MessageInsertDataReferencedPostTypeEnum];
+export const MessageInsertDataReferencedPostLiveStatusEnum = {
+    Ongoing: 'ongoing',
+    Ended: 'ended'
+} as const;
+
+export type MessageInsertDataReferencedPostLiveStatusEnum = typeof MessageInsertDataReferencedPostLiveStatusEnum[keyof typeof MessageInsertDataReferencedPostLiveStatusEnum];
+
+/**
+ * 
+ * @export
  * @interface MessageInsertDataSender
  */
 export interface MessageInsertDataSender {
@@ -9527,11 +9413,39 @@ export interface MessageInsertDataSender {
     'createdAt'?: string;
     /**
      * 
-     * @type {GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadataActor}
+     * @type {GroupUpdateDataOwnerTagsInnerAllOfAddedMetadataActor}
      * @memberof MessageInsertDataSender
      */
-    'context'?: GroupUpdateDataOwnerTagsInnerAllOf1AddedMetadataActor;
+    'context'?: GroupUpdateDataOwnerTagsInnerAllOfAddedMetadataActor;
 }
+/**
+ * 
+ * @export
+ * @interface MessageInsertDataTranscription
+ */
+export interface MessageInsertDataTranscription {
+    /**
+     * 
+     * @type {string}
+     * @memberof MessageInsertDataTranscription
+     */
+    'status': MessageInsertDataTranscriptionStatusEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof MessageInsertDataTranscription
+     */
+    'error'?: string;
+}
+
+export const MessageInsertDataTranscriptionStatusEnum = {
+    InProgress: 'in-progress',
+    Completed: 'completed',
+    Failed: 'failed'
+} as const;
+
+export type MessageInsertDataTranscriptionStatusEnum = typeof MessageInsertDataTranscriptionStatusEnum[keyof typeof MessageInsertDataTranscriptionStatusEnum];
+
 /**
  * 
  * @export
@@ -9617,7 +9531,7 @@ export interface MessageUpdateData {
      * @type {MessageInsertDataError}
      * @memberof MessageUpdateData
      */
-    'error'?: MessageInsertDataError | null;
+    'error'?: MessageInsertDataError;
     /**
      * 
      * @type {string}
@@ -9662,10 +9576,22 @@ export interface MessageUpdateData {
     'conversationMetadata'?: MessageInsertDataConversationMetadata;
     /**
      * 
+     * @type {MessageInsertDataTranscription}
+     * @memberof MessageUpdateData
+     */
+    'transcription'?: MessageInsertDataTranscription;
+    /**
+     * 
      * @type {MessageInsertDataReactionAction}
      * @memberof MessageUpdateData
      */
     'reactionAction'?: MessageInsertDataReactionAction;
+    /**
+     * 
+     * @type {MessageInsertDataReferencedPost}
+     * @memberof MessageUpdateData
+     */
+    'referencedPost'?: MessageInsertDataReferencedPost;
     /**
      * 
      * @type {Array<string>}
@@ -9702,6 +9628,12 @@ export interface MessageUpdateData {
      * @memberof MessageUpdateData
      */
     'failDecryption'?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof MessageUpdateData
+     */
+    'isComment'?: boolean;
     /**
      * 
      * @type {MessageInsertDataAction}
@@ -10172,10 +10104,10 @@ export interface PlatformproductInsertData {
     'isSyncing'?: boolean;
     /**
      * 
-     * @type {AccountInsertDataErrorAllOf}
+     * @type {AccountInsertDataArchiveStateError}
      * @memberof PlatformproductInsertData
      */
-    'error'?: AccountInsertDataErrorAllOf;
+    'error'?: AccountInsertDataArchiveStateError;
     /**
      * 
      * @type {string}
@@ -10340,10 +10272,10 @@ export interface PlatformproductUpdateData {
     'isSyncing'?: boolean;
     /**
      * 
-     * @type {AccountInsertDataErrorAllOf}
+     * @type {AccountInsertDataArchiveStateError}
      * @memberof PlatformproductUpdateData
      */
-    'error'?: AccountInsertDataErrorAllOf;
+    'error'?: AccountInsertDataArchiveStateError;
     /**
      * 
      * @type {string}
@@ -11744,6 +11676,12 @@ export interface TeamInsertDataMetadata {
      * @memberof TeamInsertDataMetadata
      */
     'industry'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof TeamInsertDataMetadata
+     */
+    'subIndustry'?: string;
 }
 /**
  * 
@@ -12699,16 +12637,16 @@ export interface TrackingInsertDataEventsInner {
     'limit'?: number | null;
     /**
      * 
-     * @type {TrackingInsertDataEventsInnerAllOf1Delay}
+     * @type {TrackingInsertDataEventsInnerAllOfDelay}
      * @memberof TrackingInsertDataEventsInner
      */
-    'delay'?: TrackingInsertDataEventsInnerAllOf1Delay;
+    'delay'?: TrackingInsertDataEventsInnerAllOfDelay;
     /**
      * 
-     * @type {TrackingInsertDataEventsInnerAllOf1ScheduleOptions}
+     * @type {TrackingInsertDataEventsInnerAllOfScheduleOptions}
      * @memberof TrackingInsertDataEventsInner
      */
-    'scheduleOptions'?: TrackingInsertDataEventsInnerAllOf1ScheduleOptions | null;
+    'scheduleOptions'?: TrackingInsertDataEventsInnerAllOfScheduleOptions | null;
     /**
      * an array of usersIds to notify users when an event is created
      * @type {Array<string>}
@@ -12717,157 +12655,89 @@ export interface TrackingInsertDataEventsInner {
     'notifyUsers'?: Array<string> | null;
     /**
      * 
-     * @type {{ [key: string]: TrackingInsertDataEventsInnerAllOf1ConditionsValue; }}
+     * @type {{ [key: string]: TrackingInsertDataEventsInnerAllOfConditionsValue; }}
      * @memberof TrackingInsertDataEventsInner
      */
-    'conditions'?: { [key: string]: TrackingInsertDataEventsInnerAllOf1ConditionsValue; };
+    'conditions'?: { [key: string]: TrackingInsertDataEventsInnerAllOfConditionsValue; };
 }
 /**
  * 
  * @export
- * @interface TrackingInsertDataEventsInnerAllOf
+ * @interface TrackingInsertDataEventsInnerAllOfConditionsValue
  */
-export interface TrackingInsertDataEventsInnerAllOf {
+export interface TrackingInsertDataEventsInnerAllOfConditionsValue {
     /**
      * 
-     * @type {number}
-     * @memberof TrackingInsertDataEventsInnerAllOf
+     * @type {TrackingInsertDataEventsInnerAllOfConditionsValueValues}
+     * @memberof TrackingInsertDataEventsInnerAllOfConditionsValue
      */
-    'id'?: number;
-    /**
-     * Passed in the body to mark for deletion
-     * @type {boolean}
-     * @memberof TrackingInsertDataEventsInnerAllOf
-     */
-    'delete'?: boolean;
-}
-/**
- * 
- * @export
- * @interface TrackingInsertDataEventsInnerAllOf1
- */
-export interface TrackingInsertDataEventsInnerAllOf1 {
-    /**
-     * the message template to send when this trigger is activated
-     * @type {string}
-     * @memberof TrackingInsertDataEventsInnerAllOf1
-     */
-    'templateId'?: string;
-    /**
-     * Whether the condition is enabled. If false, the trigger will be ignored whenever a data point is ingested
-     * @type {boolean}
-     * @memberof TrackingInsertDataEventsInnerAllOf1
-     */
-    'enabled'?: boolean;
-    /**
-     * Maximum notifications to be sent per order on this trigger. Default null -- unlimited
-     * @type {number}
-     * @memberof TrackingInsertDataEventsInnerAllOf1
-     */
-    'limit'?: number | null;
-    /**
-     * 
-     * @type {TrackingInsertDataEventsInnerAllOf1Delay}
-     * @memberof TrackingInsertDataEventsInnerAllOf1
-     */
-    'delay'?: TrackingInsertDataEventsInnerAllOf1Delay;
-    /**
-     * 
-     * @type {TrackingInsertDataEventsInnerAllOf1ScheduleOptions}
-     * @memberof TrackingInsertDataEventsInnerAllOf1
-     */
-    'scheduleOptions'?: TrackingInsertDataEventsInnerAllOf1ScheduleOptions | null;
-    /**
-     * an array of usersIds to notify users when an event is created
-     * @type {Array<string>}
-     * @memberof TrackingInsertDataEventsInnerAllOf1
-     */
-    'notifyUsers'?: Array<string> | null;
-    /**
-     * 
-     * @type {{ [key: string]: TrackingInsertDataEventsInnerAllOf1ConditionsValue; }}
-     * @memberof TrackingInsertDataEventsInnerAllOf1
-     */
-    'conditions'?: { [key: string]: TrackingInsertDataEventsInnerAllOf1ConditionsValue; };
-}
-/**
- * 
- * @export
- * @interface TrackingInsertDataEventsInnerAllOf1ConditionsValue
- */
-export interface TrackingInsertDataEventsInnerAllOf1ConditionsValue {
-    /**
-     * 
-     * @type {TrackingInsertDataEventsInnerAllOf1ConditionsValueValues}
-     * @memberof TrackingInsertDataEventsInnerAllOf1ConditionsValue
-     */
-    'values': TrackingInsertDataEventsInnerAllOf1ConditionsValueValues;
+    'values': TrackingInsertDataEventsInnerAllOfConditionsValueValues;
     /**
      * the test for the condition. Default is `include`
      * @type {string}
-     * @memberof TrackingInsertDataEventsInnerAllOf1ConditionsValue
+     * @memberof TrackingInsertDataEventsInnerAllOfConditionsValue
      */
-    'test'?: TrackingInsertDataEventsInnerAllOf1ConditionsValueTestEnum;
+    'test'?: TrackingInsertDataEventsInnerAllOfConditionsValueTestEnum;
 }
 
-export const TrackingInsertDataEventsInnerAllOf1ConditionsValueTestEnum = {
+export const TrackingInsertDataEventsInnerAllOfConditionsValueTestEnum = {
     Include: 'include',
     Exclude: 'exclude',
     GreaterThan: 'greater-than',
     LessThan: 'less-than'
 } as const;
 
-export type TrackingInsertDataEventsInnerAllOf1ConditionsValueTestEnum = typeof TrackingInsertDataEventsInnerAllOf1ConditionsValueTestEnum[keyof typeof TrackingInsertDataEventsInnerAllOf1ConditionsValueTestEnum];
+export type TrackingInsertDataEventsInnerAllOfConditionsValueTestEnum = typeof TrackingInsertDataEventsInnerAllOfConditionsValueTestEnum[keyof typeof TrackingInsertDataEventsInnerAllOfConditionsValueTestEnum];
 
 /**
- * @type TrackingInsertDataEventsInnerAllOf1ConditionsValueValues
+ * @type TrackingInsertDataEventsInnerAllOfConditionsValueValues
  * @export
  */
-export type TrackingInsertDataEventsInnerAllOf1ConditionsValueValues = Array<number> | Array<string>;
+export type TrackingInsertDataEventsInnerAllOfConditionsValueValues = Array<number> | Array<string>;
 
 /**
  * the optional delay to attach to this service
  * @export
- * @interface TrackingInsertDataEventsInnerAllOf1Delay
+ * @interface TrackingInsertDataEventsInnerAllOfDelay
  */
-export interface TrackingInsertDataEventsInnerAllOf1Delay {
+export interface TrackingInsertDataEventsInnerAllOfDelay {
     /**
      * the delay in sending the message
      * @type {number}
-     * @memberof TrackingInsertDataEventsInnerAllOf1Delay
+     * @memberof TrackingInsertDataEventsInnerAllOfDelay
      */
     'seconds'?: number;
     /**
      * The type of delay \"stale\" means that the message is sent out with the aforementioned delay (delayS) if the order is not updated. If the order is updated before the delay is over, then the message is cancelled \"simple\" means that the message is sent out regardless of the order update. 
      * @type {string}
-     * @memberof TrackingInsertDataEventsInnerAllOf1Delay
+     * @memberof TrackingInsertDataEventsInnerAllOfDelay
      */
-    'type'?: TrackingInsertDataEventsInnerAllOf1DelayTypeEnum;
+    'type'?: TrackingInsertDataEventsInnerAllOfDelayTypeEnum;
 }
 
-export const TrackingInsertDataEventsInnerAllOf1DelayTypeEnum = {
+export const TrackingInsertDataEventsInnerAllOfDelayTypeEnum = {
     Simple: 'simple',
     Stale: 'stale'
 } as const;
 
-export type TrackingInsertDataEventsInnerAllOf1DelayTypeEnum = typeof TrackingInsertDataEventsInnerAllOf1DelayTypeEnum[keyof typeof TrackingInsertDataEventsInnerAllOf1DelayTypeEnum];
+export type TrackingInsertDataEventsInnerAllOfDelayTypeEnum = typeof TrackingInsertDataEventsInnerAllOfDelayTypeEnum[keyof typeof TrackingInsertDataEventsInnerAllOfDelayTypeEnum];
 
 /**
  * 
  * @export
- * @interface TrackingInsertDataEventsInnerAllOf1ScheduleOptions
+ * @interface TrackingInsertDataEventsInnerAllOfScheduleOptions
  */
-export interface TrackingInsertDataEventsInnerAllOf1ScheduleOptions {
+export interface TrackingInsertDataEventsInnerAllOfScheduleOptions {
     /**
      * the order parameter to use for the schedule
      * @type {string}
-     * @memberof TrackingInsertDataEventsInnerAllOf1ScheduleOptions
+     * @memberof TrackingInsertDataEventsInnerAllOfScheduleOptions
      */
     'parameter'?: string;
     /**
      * the time to schedule message before or after the parameter in seconds. Negative value means before the parameter date
      * @type {number}
-     * @memberof TrackingInsertDataEventsInnerAllOf1ScheduleOptions
+     * @memberof TrackingInsertDataEventsInnerAllOfScheduleOptions
      */
     'delaySeconds'?: number;
 }
@@ -13689,7 +13559,7 @@ export const AlarmsApiAxiosParamCreator = function (configuration?: Configuratio
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        alarmPost: async (alarmPostRequest?: AlarmPostRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        alarmPost: async (alarmPostRequest?: AlarmPostRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/alarm`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -13737,9 +13607,11 @@ export const AlarmsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async alarmPost(alarmPostRequest?: AlarmPostRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AlarmPost200Response>> {
+        async alarmPost(alarmPostRequest?: AlarmPostRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AlarmPost200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.alarmPost(alarmPostRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AlarmsApi.alarmPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -13758,7 +13630,7 @@ export const AlarmsApiFactory = function (configuration?: Configuration, basePat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        alarmPost(requestParameters: AlarmsApiAlarmPostRequest = {}, options?: AxiosRequestConfig): AxiosPromise<AlarmPost200Response> {
+        alarmPost(requestParameters: AlarmsApiAlarmPostRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<AlarmPost200Response> {
             return localVarFp.alarmPost(requestParameters.alarmPostRequest, options).then((request) => request(axios, basePath));
         },
     };
@@ -13793,10 +13665,11 @@ export class AlarmsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AlarmsApi
      */
-    public alarmPost(requestParameters: AlarmsApiAlarmPostRequest = {}, options?: AxiosRequestConfig) {
+    public alarmPost(requestParameters: AlarmsApiAlarmPostRequest = {}, options?: RawAxiosRequestConfig) {
         return AlarmsApiFp(this.configuration).alarmPost(requestParameters.alarmPostRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -13814,7 +13687,7 @@ export const EventSubscriptionApiAxiosParamCreator = function (configuration?: C
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        postMessageBySecret: async (id: string, secret: string, postMessageBySecretRequest?: PostMessageBySecretRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        postMessageBySecret: async (id: string, secret: string, postMessageBySecretRequest?: PostMessageBySecretRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('postMessageBySecret', 'id', id)
             // verify required parameter 'secret' is not null or undefined
@@ -13854,7 +13727,7 @@ export const EventSubscriptionApiAxiosParamCreator = function (configuration?: C
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subscriptionsDelete: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        subscriptionsDelete: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('subscriptionsDelete', 'id', id)
             const localVarPath = `/subscriptions/{id}`
@@ -13895,7 +13768,7 @@ export const EventSubscriptionApiAxiosParamCreator = function (configuration?: C
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subscriptionsGet: async (type?: EventSubscriptionType, accountId?: string, teamId?: Array<string>, userId?: Array<string>, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        subscriptionsGet: async (type?: EventSubscriptionType, accountId?: string, teamId?: Array<string>, userId?: Array<string>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/subscriptions`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -13947,7 +13820,7 @@ export const EventSubscriptionApiAxiosParamCreator = function (configuration?: C
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subscriptionsMessagePost: async (id: string, eventWebhookData?: EventWebhookData, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        subscriptionsMessagePost: async (id: string, eventWebhookData?: EventWebhookData, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('subscriptionsMessagePost', 'id', id)
             const localVarPath = `/subscriptions/{id}/message`
@@ -13989,7 +13862,7 @@ export const EventSubscriptionApiAxiosParamCreator = function (configuration?: C
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subscriptionsPatch: async (id: string, updateEventSubscription?: UpdateEventSubscription, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        subscriptionsPatch: async (id: string, updateEventSubscription?: UpdateEventSubscription, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('subscriptionsPatch', 'id', id)
             const localVarPath = `/subscriptions/{id}`
@@ -14030,7 +13903,7 @@ export const EventSubscriptionApiAxiosParamCreator = function (configuration?: C
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subscriptionsPost: async (postEventSubscription?: PostEventSubscription, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        subscriptionsPost: async (postEventSubscription?: PostEventSubscription, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/subscriptions`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -14080,9 +13953,11 @@ export const EventSubscriptionApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async postMessageBySecret(id: string, secret: string, postMessageBySecretRequest?: PostMessageBySecretRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async postMessageBySecret(id: string, secret: string, postMessageBySecretRequest?: PostMessageBySecretRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.postMessageBySecret(id, secret, postMessageBySecretRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['EventSubscriptionApi.postMessageBySecret']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -14091,9 +13966,11 @@ export const EventSubscriptionApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async subscriptionsDelete(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<SubscriptionsDelete200Response>> {
+        async subscriptionsDelete(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<SubscriptionsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.subscriptionsDelete(id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['EventSubscriptionApi.subscriptionsDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -14105,9 +13982,11 @@ export const EventSubscriptionApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async subscriptionsGet(type?: EventSubscriptionType, accountId?: string, teamId?: Array<string>, userId?: Array<string>, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<SubscriptionsGet200Response>> {
+        async subscriptionsGet(type?: EventSubscriptionType, accountId?: string, teamId?: Array<string>, userId?: Array<string>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<SubscriptionsGet200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.subscriptionsGet(type, accountId, teamId, userId, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['EventSubscriptionApi.subscriptionsGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -14117,9 +13996,11 @@ export const EventSubscriptionApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async subscriptionsMessagePost(id: string, eventWebhookData?: EventWebhookData, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async subscriptionsMessagePost(id: string, eventWebhookData?: EventWebhookData, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.subscriptionsMessagePost(id, eventWebhookData, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['EventSubscriptionApi.subscriptionsMessagePost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -14129,9 +14010,11 @@ export const EventSubscriptionApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async subscriptionsPatch(id: string, updateEventSubscription?: UpdateEventSubscription, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EventSubscription>> {
+        async subscriptionsPatch(id: string, updateEventSubscription?: UpdateEventSubscription, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EventSubscription>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.subscriptionsPatch(id, updateEventSubscription, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['EventSubscriptionApi.subscriptionsPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -14140,9 +14023,11 @@ export const EventSubscriptionApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async subscriptionsPost(postEventSubscription?: PostEventSubscription, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EventSubscription>> {
+        async subscriptionsPost(postEventSubscription?: PostEventSubscription, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EventSubscription>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.subscriptionsPost(postEventSubscription, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['EventSubscriptionApi.subscriptionsPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -14161,7 +14046,7 @@ export const EventSubscriptionApiFactory = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        postMessageBySecret(requestParameters: EventSubscriptionApiPostMessageBySecretRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        postMessageBySecret(requestParameters: EventSubscriptionApiPostMessageBySecretRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.postMessageBySecret(requestParameters.id, requestParameters.secret, requestParameters.postMessageBySecretRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -14171,7 +14056,7 @@ export const EventSubscriptionApiFactory = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subscriptionsDelete(requestParameters: EventSubscriptionApiSubscriptionsDeleteRequest, options?: AxiosRequestConfig): AxiosPromise<SubscriptionsDelete200Response> {
+        subscriptionsDelete(requestParameters: EventSubscriptionApiSubscriptionsDeleteRequest, options?: RawAxiosRequestConfig): AxiosPromise<SubscriptionsDelete200Response> {
             return localVarFp.subscriptionsDelete(requestParameters.id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -14181,7 +14066,7 @@ export const EventSubscriptionApiFactory = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subscriptionsGet(requestParameters: EventSubscriptionApiSubscriptionsGetRequest = {}, options?: AxiosRequestConfig): AxiosPromise<SubscriptionsGet200Response> {
+        subscriptionsGet(requestParameters: EventSubscriptionApiSubscriptionsGetRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<SubscriptionsGet200Response> {
             return localVarFp.subscriptionsGet(requestParameters.type, requestParameters.accountId, requestParameters.teamId, requestParameters.userId, options).then((request) => request(axios, basePath));
         },
         /**
@@ -14191,7 +14076,7 @@ export const EventSubscriptionApiFactory = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subscriptionsMessagePost(requestParameters: EventSubscriptionApiSubscriptionsMessagePostRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        subscriptionsMessagePost(requestParameters: EventSubscriptionApiSubscriptionsMessagePostRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.subscriptionsMessagePost(requestParameters.id, requestParameters.eventWebhookData, options).then((request) => request(axios, basePath));
         },
         /**
@@ -14201,7 +14086,7 @@ export const EventSubscriptionApiFactory = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subscriptionsPatch(requestParameters: EventSubscriptionApiSubscriptionsPatchRequest, options?: AxiosRequestConfig): AxiosPromise<EventSubscription> {
+        subscriptionsPatch(requestParameters: EventSubscriptionApiSubscriptionsPatchRequest, options?: RawAxiosRequestConfig): AxiosPromise<EventSubscription> {
             return localVarFp.subscriptionsPatch(requestParameters.id, requestParameters.updateEventSubscription, options).then((request) => request(axios, basePath));
         },
         /**
@@ -14211,7 +14096,7 @@ export const EventSubscriptionApiFactory = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        subscriptionsPost(requestParameters: EventSubscriptionApiSubscriptionsPostRequest = {}, options?: AxiosRequestConfig): AxiosPromise<EventSubscription> {
+        subscriptionsPost(requestParameters: EventSubscriptionApiSubscriptionsPostRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<EventSubscription> {
             return localVarFp.subscriptionsPost(requestParameters.postEventSubscription, options).then((request) => request(axios, basePath));
         },
     };
@@ -14365,7 +14250,7 @@ export class EventSubscriptionApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof EventSubscriptionApi
      */
-    public postMessageBySecret(requestParameters: EventSubscriptionApiPostMessageBySecretRequest, options?: AxiosRequestConfig) {
+    public postMessageBySecret(requestParameters: EventSubscriptionApiPostMessageBySecretRequest, options?: RawAxiosRequestConfig) {
         return EventSubscriptionApiFp(this.configuration).postMessageBySecret(requestParameters.id, requestParameters.secret, requestParameters.postMessageBySecretRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -14377,7 +14262,7 @@ export class EventSubscriptionApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof EventSubscriptionApi
      */
-    public subscriptionsDelete(requestParameters: EventSubscriptionApiSubscriptionsDeleteRequest, options?: AxiosRequestConfig) {
+    public subscriptionsDelete(requestParameters: EventSubscriptionApiSubscriptionsDeleteRequest, options?: RawAxiosRequestConfig) {
         return EventSubscriptionApiFp(this.configuration).subscriptionsDelete(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -14389,7 +14274,7 @@ export class EventSubscriptionApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof EventSubscriptionApi
      */
-    public subscriptionsGet(requestParameters: EventSubscriptionApiSubscriptionsGetRequest = {}, options?: AxiosRequestConfig) {
+    public subscriptionsGet(requestParameters: EventSubscriptionApiSubscriptionsGetRequest = {}, options?: RawAxiosRequestConfig) {
         return EventSubscriptionApiFp(this.configuration).subscriptionsGet(requestParameters.type, requestParameters.accountId, requestParameters.teamId, requestParameters.userId, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -14401,7 +14286,7 @@ export class EventSubscriptionApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof EventSubscriptionApi
      */
-    public subscriptionsMessagePost(requestParameters: EventSubscriptionApiSubscriptionsMessagePostRequest, options?: AxiosRequestConfig) {
+    public subscriptionsMessagePost(requestParameters: EventSubscriptionApiSubscriptionsMessagePostRequest, options?: RawAxiosRequestConfig) {
         return EventSubscriptionApiFp(this.configuration).subscriptionsMessagePost(requestParameters.id, requestParameters.eventWebhookData, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -14413,7 +14298,7 @@ export class EventSubscriptionApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof EventSubscriptionApi
      */
-    public subscriptionsPatch(requestParameters: EventSubscriptionApiSubscriptionsPatchRequest, options?: AxiosRequestConfig) {
+    public subscriptionsPatch(requestParameters: EventSubscriptionApiSubscriptionsPatchRequest, options?: RawAxiosRequestConfig) {
         return EventSubscriptionApiFp(this.configuration).subscriptionsPatch(requestParameters.id, requestParameters.updateEventSubscription, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -14425,10 +14310,11 @@ export class EventSubscriptionApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof EventSubscriptionApi
      */
-    public subscriptionsPost(requestParameters: EventSubscriptionApiSubscriptionsPostRequest = {}, options?: AxiosRequestConfig) {
+    public subscriptionsPost(requestParameters: EventSubscriptionApiSubscriptionsPostRequest = {}, options?: RawAxiosRequestConfig) {
         return EventSubscriptionApiFp(this.configuration).subscriptionsPost(requestParameters.postEventSubscription, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -14446,7 +14332,7 @@ export const WebSocketApiAxiosParamCreator = function (configuration?: Configura
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        ws: async (accessToken: string, events: Array<EventName>, accounts?: Array<string>, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        ws: async (accessToken: string, events: Array<EventName>, accounts?: Array<string>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accessToken' is not null or undefined
             assertParamExists('ws', 'accessToken', accessToken)
             // verify required parameter 'events' is not null or undefined
@@ -14500,7 +14386,7 @@ export const WebSocketApiAxiosParamCreator = function (configuration?: Configura
          * @deprecated
          * @throws {RequiredError}
          */
-        wsLegacy: async (accessToken: string, events: Array<EventName>, accounts?: Array<string>, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        wsLegacy: async (accessToken: string, events: Array<EventName>, accounts?: Array<string>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accessToken' is not null or undefined
             assertParamExists('wsLegacy', 'accessToken', accessToken)
             // verify required parameter 'events' is not null or undefined
@@ -14563,9 +14449,11 @@ export const WebSocketApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async ws(accessToken: string, events: Array<EventName>, accounts?: Array<string>, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async ws(accessToken: string, events: Array<EventName>, accounts?: Array<string>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.ws(accessToken, events, accounts, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['WebSocketApi.ws']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * Connect to this route to receive live events from ChatDaddy via a WebSocket. This route is deprecated, use `/ws` instead.
@@ -14577,9 +14465,11 @@ export const WebSocketApiFp = function(configuration?: Configuration) {
          * @deprecated
          * @throws {RequiredError}
          */
-        async wsLegacy(accessToken: string, events: Array<EventName>, accounts?: Array<string>, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async wsLegacy(accessToken: string, events: Array<EventName>, accounts?: Array<string>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.wsLegacy(accessToken, events, accounts, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['WebSocketApi.wsLegacy']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -14598,7 +14488,7 @@ export const WebSocketApiFactory = function (configuration?: Configuration, base
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        ws(requestParameters: WebSocketApiWsRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        ws(requestParameters: WebSocketApiWsRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.ws(requestParameters.accessToken, requestParameters.events, requestParameters.accounts, options).then((request) => request(axios, basePath));
         },
         /**
@@ -14609,7 +14499,7 @@ export const WebSocketApiFactory = function (configuration?: Configuration, base
          * @deprecated
          * @throws {RequiredError}
          */
-        wsLegacy(requestParameters: WebSocketApiWsLegacyRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        wsLegacy(requestParameters: WebSocketApiWsLegacyRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.wsLegacy(requestParameters.accessToken, requestParameters.events, requestParameters.accounts, options).then((request) => request(axios, basePath));
         },
     };
@@ -14686,7 +14576,7 @@ export class WebSocketApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof WebSocketApi
      */
-    public ws(requestParameters: WebSocketApiWsRequest, options?: AxiosRequestConfig) {
+    public ws(requestParameters: WebSocketApiWsRequest, options?: RawAxiosRequestConfig) {
         return WebSocketApiFp(this.configuration).ws(requestParameters.accessToken, requestParameters.events, requestParameters.accounts, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -14699,10 +14589,11 @@ export class WebSocketApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof WebSocketApi
      */
-    public wsLegacy(requestParameters: WebSocketApiWsLegacyRequest, options?: AxiosRequestConfig) {
+    public wsLegacy(requestParameters: WebSocketApiWsLegacyRequest, options?: RawAxiosRequestConfig) {
         return WebSocketApiFp(this.configuration).wsLegacy(requestParameters.accessToken, requestParameters.events, requestParameters.accounts, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -14717,7 +14608,7 @@ export const WebhookExampleApiAxiosParamCreator = function (configuration?: Conf
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        webhookExample: async (eventWebhookData?: EventWebhookData, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        webhookExample: async (eventWebhookData?: EventWebhookData, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/webhook/example`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -14760,9 +14651,11 @@ export const WebhookExampleApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async webhookExample(eventWebhookData?: EventWebhookData, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async webhookExample(eventWebhookData?: EventWebhookData, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.webhookExample(eventWebhookData, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['WebhookExampleApi.webhookExample']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -14780,7 +14673,7 @@ export const WebhookExampleApiFactory = function (configuration?: Configuration,
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        webhookExample(requestParameters: WebhookExampleApiWebhookExampleRequest = {}, options?: AxiosRequestConfig): AxiosPromise<void> {
+        webhookExample(requestParameters: WebhookExampleApiWebhookExampleRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.webhookExample(requestParameters.eventWebhookData, options).then((request) => request(axios, basePath));
         },
     };
@@ -14814,9 +14707,10 @@ export class WebhookExampleApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof WebhookExampleApi
      */
-    public webhookExample(requestParameters: WebhookExampleApiWebhookExampleRequest = {}, options?: AxiosRequestConfig) {
+    public webhookExample(requestParameters: WebhookExampleApiWebhookExampleRequest = {}, options?: RawAxiosRequestConfig) {
         return WebhookExampleApiFp(this.configuration).webhookExample(requestParameters.eventWebhookData, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 

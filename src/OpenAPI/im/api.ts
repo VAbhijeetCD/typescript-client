@@ -16,14 +16,14 @@ const BASE_PATH = "https://api.chatdaddy.tech/im".replace(/\/+$/, "");
 
 
 import type { Configuration } from '../configuration';
-import type { AxiosPromise, AxiosInstance, AxiosRequestConfig } from 'axios';
+import type { AxiosPromise, AxiosInstance, RawAxiosRequestConfig } from 'axios';
 import globalAxios from 'axios';
 // Some imports not used depending on template conditions
 // @ts-ignore
 import { DUMMY_BASE_URL, assertParamExists, setApiKeyToObject, setBasicAuthToObject, setBearerAuthToObject, setOAuthToObject, setSearchParams, serializeDataIfNeeded, toPathString, createRequestFunction } from '../common';
 import type { RequestArgs } from '../base';
 // @ts-ignore
-import { COLLECTION_FORMATS, BaseAPI, RequiredError } from '../base';
+import { COLLECTION_FORMATS, BaseAPI, RequiredError, operationServerMap } from '../base';
 
 /**
  * 
@@ -38,7 +38,7 @@ export interface Account {
      */
     'accountId': string;
     /**
-     * Owner of thr account
+     * The user ID of the user on ChatDaddy
      * @type {string}
      * @memberof Account
      */
@@ -55,12 +55,6 @@ export interface Account {
      * @memberof Account
      */
     'nickname': string;
-    /**
-     * 
-     * @type {{ [key: string]: any; }}
-     * @memberof Account
-     */
-    'credentials'?: { [key: string]: any; } | null;
     /**
      * 
      * @type {AccountTier}
@@ -122,25 +116,25 @@ export interface Account {
      */
     'state': AccountState;
     /**
-     * 
-     * @type {AccountError}
+     * Last known connection error this account encountered. The presence of this field does not imply that the account is in an error state, only that this was the last error encountered. 
+     * @type {AppError}
      * @memberof Account
      */
-    'error'?: AccountError | null;
+    'error'?: AppError | null;
     /**
-     * 
+     * Additional information about the current state of the account. This can be used to provide more context about the state of the account. Eg. has history sync completed, what type of  
      * @type {{ [key: string]: any; }}
      * @memberof Account
      */
     'stateInfo': { [key: string]: any; };
     /**
-     * 
+     * If true, you can call the \"accountsOpen\" endpoint and the account will be connected without any additional steps or user interaction. False means some additional steps are required to connect the account. 
      * @type {boolean}
      * @memberof Account
      */
     'canLogin': boolean;
     /**
-     * 
+     * The ID of the user who is currently logged in to this account. Eg. the phone number of the user who is currently logged in in a WhatsApp account. 
      * @type {string}
      * @memberof Account
      */
@@ -157,6 +151,12 @@ export interface Account {
      * @memberof Account
      */
     'settings': AccountSettings;
+    /**
+     * 
+     * @type {ArchiveState}
+     * @memberof Account
+     */
+    'archiveState'?: ArchiveState;
 }
 
 
@@ -419,31 +419,6 @@ export type AccountCredentialsWabaTypeEnum = typeof AccountCredentialsWabaTypeEn
 /**
  * 
  * @export
- * @interface AccountError
- */
-export interface AccountError {
-    /**
-     * 
-     * @type {number}
-     * @memberof AccountError
-     */
-    'statusCode': number;
-    /**
-     * What the error was
-     * @type {string}
-     * @memberof AccountError
-     */
-    'message': string;
-    /**
-     * 
-     * @type {AppErrorData}
-     * @memberof AccountError
-     */
-    'data'?: AppErrorData;
-}
-/**
- * 
- * @export
  * @interface AccountSettings
  */
 export interface AccountSettings {
@@ -481,10 +456,11 @@ export interface AccountSettings {
      * 
      * @type {AccountSettingsNewChatsAssignee}
      * @memberof AccountSettings
+     * @deprecated
      */
     'newChatsAssignee'?: AccountSettingsNewChatsAssignee;
     /**
-     * Should polls be sent as buttons instead of a message. This is useful for the regular WhatsApp API
+     * Should polls be sent as buttons instead of a message, to avoid unreliable button msg delivery for some recipients. This is for the regular WhatsApp API only.
      * @type {boolean}
      * @memberof AccountSettings
      */
@@ -513,9 +489,27 @@ export interface AccountSettings {
      * @memberof AccountSettings
      */
     'geoLocation'?: string;
+    /**
+     * Should voice messages received be automatically transcribed to text
+     * @type {boolean}
+     * @memberof AccountSettings
+     */
+    'autoTranscribeVoiceMessages'?: boolean;
+    /**
+     * Should calls received be automatically transcribed to text?
+     * @type {boolean}
+     * @memberof AccountSettings
+     */
+    'autoTranscribeCalls'?: boolean;
+    /**
+     * 
+     * @type {CommentsSilenceConfig}
+     * @memberof AccountSettings
+     */
+    'commentsSilence'?: CommentsSilenceConfig;
 }
 /**
- * All new chats will be auto asssigned if one of the option is enabled and select any Assignee
+ * Allow assignment of new chats to a specific assignee. All new chats will be auto asssigned if one of the option is enabled and select any assignee. Deprecated: use a message flow to do this automation
  * @export
  * @interface AccountSettingsNewChatsAssignee
  */
@@ -637,6 +631,19 @@ export type AccountWaChangeLoginModeOneOf1TypeEnum = typeof AccountWaChangeLogin
 /**
  * 
  * @export
+ * @interface AccountsDelete200Response
+ */
+export interface AccountsDelete200Response {
+    /**
+     * 
+     * @type {boolean}
+     * @memberof AccountsDelete200Response
+     */
+    'success': boolean;
+}
+/**
+ * 
+ * @export
  * @interface AccountsGet200Response
  */
 export interface AccountsGet200Response {
@@ -652,19 +659,6 @@ export interface AccountsGet200Response {
      * @memberof AccountsGet200Response
      */
     'total'?: number;
-}
-/**
- * 
- * @export
- * @interface AccountsLogout200Response
- */
-export interface AccountsLogout200Response {
-    /**
-     * 
-     * @type {boolean}
-     * @memberof AccountsLogout200Response
-     */
-    'success': boolean;
 }
 /**
  * Update an account. Specifying account updates the type
@@ -1375,6 +1369,40 @@ interface AppErrorDataHelpLinkOneOf1 {
 /**
  * 
  * @export
+ * @interface ArchiveState
+ */
+export interface ArchiveState {
+    /**
+     * 
+     * @type {string}
+     * @memberof ArchiveState
+     */
+    'type': ArchiveStateTypeEnum;
+    /**
+     * An ISO formatted timestamp
+     * @type {string}
+     * @memberof ArchiveState
+     */
+    'doneAt': string;
+    /**
+     * 
+     * @type {AppError}
+     * @memberof ArchiveState
+     */
+    'error'?: AppError;
+}
+
+export const ArchiveStateTypeEnum = {
+    Archiving: 'archiving',
+    Error: 'error',
+    Done: 'done'
+} as const;
+
+export type ArchiveStateTypeEnum = typeof ArchiveStateTypeEnum[keyof typeof ArchiveStateTypeEnum];
+
+/**
+ * 
+ * @export
  * @interface AssigneeFilter
  */
 export interface AssigneeFilter {
@@ -1391,6 +1419,64 @@ export interface AssigneeFilter {
      */
     'assigned'?: MetadataQuery;
 }
+/**
+ * @type BulkMessageAction
+ * @export
+ */
+export type BulkMessageAction = BulkMessageActionOneOf | BulkMessageActionOneOf1;
+
+/**
+ * 
+ * @export
+ * @interface BulkMessageActionOneOf
+ */
+export interface BulkMessageActionOneOf {
+    /**
+     * 
+     * @type {string}
+     * @memberof BulkMessageActionOneOf
+     */
+    'type': BulkMessageActionOneOfTypeEnum;
+}
+
+export const BulkMessageActionOneOfTypeEnum = {
+    Delete: 'delete'
+} as const;
+
+export type BulkMessageActionOneOfTypeEnum = typeof BulkMessageActionOneOfTypeEnum[keyof typeof BulkMessageActionOneOfTypeEnum];
+
+/**
+ * 
+ * @export
+ * @interface BulkMessageActionOneOf1
+ */
+export interface BulkMessageActionOneOf1 {
+    /**
+     * 
+     * @type {string}
+     * @memberof BulkMessageActionOneOf1
+     */
+    'type': BulkMessageActionOneOf1TypeEnum;
+    /**
+     * An ISO formatted timestamp
+     * @type {string}
+     * @memberof BulkMessageActionOneOf1
+     */
+    'timestamp'?: string;
+    /**
+     * If multiple messages are being retried, add an interval between each message, starting from the timestamp
+     * @type {number}
+     * @memberof BulkMessageActionOneOf1
+     */
+    'intervalS'?: number;
+}
+
+export const BulkMessageActionOneOf1TypeEnum = {
+    Retry: 'retry'
+} as const;
+
+export type BulkMessageActionOneOf1TypeEnum = typeof BulkMessageActionOneOf1TypeEnum[keyof typeof BulkMessageActionOneOf1TypeEnum];
+
 /**
  * 
  * @export
@@ -1512,7 +1598,7 @@ export interface Chat {
      */
     'presences'?: Array<ChatPresence>;
     /**
-     * cursor to sort chats by
+     * Globally unique cursor to sort chats by. It\'s a simple concatenation of: - pinned status (0 or 1) - archived status (0 or 1) - last message timestamp (in hex) - partial chat ID - last 4 chars of the account ID 
      * @type {string}
      * @memberof Chat
      */
@@ -1715,6 +1801,28 @@ export interface ChatsGetTicketParameter {
 /**
  * 
  * @export
+ * @interface CommentsSilenceConfig
+ */
+export interface CommentsSilenceConfig {
+    /**
+     * Settings for which comments should be silenced. When silenced, the comment will not the chat\'s lastMessage or unread count.
+     * @type {string}
+     * @memberof CommentsSilenceConfig
+     */
+    'category'?: CommentsSilenceConfigCategoryEnum;
+}
+
+export const CommentsSilenceConfigCategoryEnum = {
+    OngoingLive: 'ongoing-live',
+    AllLive: 'all-live',
+    All: 'all'
+} as const;
+
+export type CommentsSilenceConfigCategoryEnum = typeof CommentsSilenceConfigCategoryEnum[keyof typeof CommentsSilenceConfigCategoryEnum];
+
+/**
+ * 
+ * @export
  * @interface Contact
  */
 export interface Contact {
@@ -1809,7 +1917,7 @@ export interface Contact {
      */
     'assigner'?: string | null;
     /**
-     * 
+     * Timestamp of when the contact was last assigned
      * @type {string}
      * @memberof Contact
      */
@@ -1934,6 +2042,12 @@ export interface ContactImg {
      * @memberof ContactImg
      */
     'fetchedAt'?: string;
+    /**
+     * Timestamp of when the full image was fetched
+     * @type {string}
+     * @memberof ContactImg
+     */
+    'fullFetchedAt'?: string;
 }
 /**
  * 
@@ -1969,25 +2083,6 @@ export interface ContactTag {
      * 
      * @type {UpsertMetadata}
      * @memberof ContactTag
-     */
-    'updatedMetadata'?: UpsertMetadata;
-}
-/**
- * 
- * @export
- * @interface ContactTagAllOf
- */
-export interface ContactTagAllOf {
-    /**
-     * 
-     * @type {UpsertMetadata}
-     * @memberof ContactTagAllOf
-     */
-    'addedMetadata': UpsertMetadata;
-    /**
-     * 
-     * @type {UpsertMetadata}
-     * @memberof ContactTagAllOf
      */
     'updatedMetadata'?: UpsertMetadata;
 }
@@ -2275,10 +2370,10 @@ export interface ContactsPostContactsInner {
     'email'?: string;
     /**
      * 
-     * @type {Array<ContactTagInsert>}
+     * @type {Array<ContactTagUpdate>}
      * @memberof ContactsPostContactsInner
      */
-    'tags'?: Array<ContactTagInsert> | null;
+    'tags'?: Array<ContactTagUpdate> | null;
     /**
      * 
      * @type {string}
@@ -2305,7 +2400,7 @@ export interface CrmBoard {
      */
     'name': string;
     /**
-     * teamId of the owner of this CRM board
+     * The team ID of the team on ChatDaddy
      * @type {string}
      * @memberof CrmBoard
      */
@@ -2334,6 +2429,12 @@ export interface CrmBoard {
      * @memberof CrmBoard
      */
     'updatedMetadata'?: UpsertMetadata;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof CrmBoard
+     */
+    'pinned'?: boolean;
 }
 /**
  * 
@@ -2403,6 +2504,12 @@ export interface CrmBoardPatch {
      * @memberof CrmBoardPatch
      */
     'customFields'?: CrmBoardPatchCustomFields;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof CrmBoardPatch
+     */
+    'pinned'?: boolean;
 }
 /**
  * @type CrmBoardPatchCustomFields
@@ -2641,6 +2748,68 @@ export interface CrmTicket {
 /**
  * 
  * @export
+ * @interface CrmTicketBulkPost
+ */
+export interface CrmTicketBulkPost {
+    /**
+     * ID of a CRM board
+     * @type {string}
+     * @memberof CrmTicketBulkPost
+     */
+    'boardId': string;
+    /**
+     * 
+     * @type {Array<CrmTicketBulkPostItemsInner>}
+     * @memberof CrmTicketBulkPost
+     */
+    'items': Array<CrmTicketBulkPostItemsInner>;
+}
+/**
+ * 
+ * @export
+ * @interface CrmTicketBulkPostItemsInner
+ */
+export interface CrmTicketBulkPostItemsInner {
+    /**
+     * ID of a stage
+     * @type {string}
+     * @memberof CrmTicketBulkPostItemsInner
+     */
+    'stageId'?: string;
+    /**
+     * Title of the ticket
+     * @type {string}
+     * @memberof CrmTicketBulkPostItemsInner
+     */
+    'title': string;
+    /**
+     * 
+     * @type {UniqueContactID}
+     * @memberof CrmTicketBulkPostItemsInner
+     */
+    'contactId': UniqueContactID;
+    /**
+     * Order of a ticket
+     * @type {number}
+     * @memberof CrmTicketBulkPostItemsInner
+     */
+    'order'?: number;
+    /**
+     * An ISO formatted timestamp
+     * @type {string}
+     * @memberof CrmTicketBulkPostItemsInner
+     */
+    'createdAt'?: string;
+    /**
+     * 
+     * @type {TicketTimerCreate}
+     * @memberof CrmTicketBulkPostItemsInner
+     */
+    'timer'?: TicketTimerCreate;
+}
+/**
+ * 
+ * @export
  * @interface CrmTicketPatch
  */
 export interface CrmTicketPatch {
@@ -2777,15 +2946,21 @@ export interface EntryItems {
 /**
  * 
  * @export
- * @interface GetChatHistory200Response
+ * @interface GetPosts200Response
  */
-export interface GetChatHistory200Response {
+export interface GetPosts200Response {
     /**
      * 
-     * @type {string}
-     * @memberof GetChatHistory200Response
+     * @type {Array<ReferencedPost>}
+     * @memberof GetPosts200Response
      */
-    'requestId': string;
+    'items': Array<ReferencedPost>;
+    /**
+     * next page cursor, if it exists
+     * @type {string}
+     * @memberof GetPosts200Response
+     */
+    'nextPageCursor'?: string;
 }
 /**
  * 
@@ -2866,7 +3041,7 @@ export interface GroupMetadata {
      */
     'createdAt': string;
     /**
-     * 
+     * ID of the group owner
      * @type {string}
      * @memberof GroupMetadata
      */
@@ -2951,7 +3126,7 @@ export interface GroupParticipant {
      * @type {string}
      * @memberof GroupParticipant
      */
-    'admin'?: GroupParticipantAdminEnum;
+    'admin'?: GroupParticipantAdminEnum | null;
 }
 
 export const GroupParticipantAdminEnum = {
@@ -3110,108 +3285,6 @@ export interface MailStateInfo {
  */
 export interface Message {
     /**
-     * ID for the contact/chat on the platform
-     * @type {string}
-     * @memberof Message
-     */
-    'chatId': string;
-    /**
-     * Unique identifier for an account.  The account ID is constructed from the first 21 characters of the team ID, prefixed by \"acc\" and suffixed by 4 random hex characters. This helps uniquely identify each account as well as establish a connection between the account\'s team by embedding the partial team ID in it.
-     * @type {string}
-     * @memberof Message
-     */
-    'accountId': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof Message
-     */
-    'id': string;
-    /**
-     * 
-     * @type {boolean}
-     * @memberof Message
-     */
-    'fromMe': boolean;
-    /**
-     * The contact that sent the message (applicable for groups)
-     * @type {string}
-     * @memberof Message
-     */
-    'senderContactId'?: string | null;
-    /**
-     * 
-     * @type {MessageAllOfSender}
-     * @memberof Message
-     */
-    'sender'?: MessageAllOfSender | null;
-    /**
-     * An ISO formatted timestamp
-     * @type {string}
-     * @memberof Message
-     */
-    'timestamp': string;
-    /**
-     * 
-     * @type {MessageStatus}
-     * @memberof Message
-     */
-    'status'?: MessageStatus;
-    /**
-     * 
-     * @type {MessageAllOfError}
-     * @memberof Message
-     */
-    'error'?: MessageAllOfError | null;
-    /**
-     * Only for notes, user ID of the person who resolved the note
-     * @type {string}
-     * @memberof Message
-     */
-    'resolvedBy'?: string | null;
-    /**
-     * An ISO formatted timestamp
-     * @type {string}
-     * @memberof Message
-     */
-    'resolvedAt'?: string | null;
-    /**
-     * 
-     * @type {boolean}
-     * @memberof Message
-     */
-    'hidden'?: boolean;
-    /**
-     * If the message has been revised, i.e. edited, fixed or had its status updated, this will be incremented. This number is managed by CD, and will not reflect correctly for messages newly synced from the platform
-     * @type {number}
-     * @memberof Message
-     */
-    'revision'?: number;
-    /**
-     * An ISO formatted timestamp
-     * @type {string}
-     * @memberof Message
-     */
-    'editedAt'?: string | null;
-    /**
-     * 
-     * @type {MiscOptions}
-     * @memberof Message
-     */
-    'miscOptions'?: MiscOptions;
-    /**
-     * 
-     * @type {WABAConversationMetadata}
-     * @memberof Message
-     */
-    'conversationMetadata'?: WABAConversationMetadata;
-    /**
-     * 
-     * @type {MessageAllOfReactionAction}
-     * @memberof Message
-     */
-    'reactionAction'?: MessageAllOfReactionAction;
-    /**
      * 
      * @type {Array<string>}
      * @memberof Message
@@ -3247,6 +3320,12 @@ export interface Message {
      * @memberof Message
      */
     'failDecryption'?: boolean;
+    /**
+     * True, if the message is a comment
+     * @type {boolean}
+     * @memberof Message
+     */
+    'isComment'?: boolean;
     /**
      * 
      * @type {MessageContentAction}
@@ -3301,164 +3380,129 @@ export interface Message {
      * @memberof Message
      */
     'reactions'?: Array<MessageReaction> | null;
-}
-
-
-/**
- * 
- * @export
- * @interface MessageAllOf
- */
-export interface MessageAllOf {
     /**
      * ID for the contact/chat on the platform
      * @type {string}
-     * @memberof MessageAllOf
+     * @memberof Message
      */
     'chatId': string;
     /**
      * Unique identifier for an account.  The account ID is constructed from the first 21 characters of the team ID, prefixed by \"acc\" and suffixed by 4 random hex characters. This helps uniquely identify each account as well as establish a connection between the account\'s team by embedding the partial team ID in it.
      * @type {string}
-     * @memberof MessageAllOf
+     * @memberof Message
      */
     'accountId': string;
     /**
      * 
      * @type {string}
-     * @memberof MessageAllOf
+     * @memberof Message
      */
     'id': string;
     /**
      * 
      * @type {boolean}
-     * @memberof MessageAllOf
+     * @memberof Message
      */
     'fromMe': boolean;
     /**
      * The contact that sent the message (applicable for groups)
      * @type {string}
-     * @memberof MessageAllOf
+     * @memberof Message
      */
     'senderContactId'?: string | null;
     /**
      * 
      * @type {MessageAllOfSender}
-     * @memberof MessageAllOf
+     * @memberof Message
      */
     'sender'?: MessageAllOfSender | null;
     /**
      * An ISO formatted timestamp
      * @type {string}
-     * @memberof MessageAllOf
+     * @memberof Message
      */
     'timestamp': string;
     /**
      * 
      * @type {MessageStatus}
-     * @memberof MessageAllOf
+     * @memberof Message
      */
     'status'?: MessageStatus;
     /**
      * 
      * @type {MessageAllOfError}
-     * @memberof MessageAllOf
+     * @memberof Message
      */
-    'error'?: MessageAllOfError | null;
+    'error'?: MessageAllOfError;
     /**
      * Only for notes, user ID of the person who resolved the note
      * @type {string}
-     * @memberof MessageAllOf
+     * @memberof Message
      */
     'resolvedBy'?: string | null;
     /**
      * An ISO formatted timestamp
      * @type {string}
-     * @memberof MessageAllOf
+     * @memberof Message
      */
     'resolvedAt'?: string | null;
     /**
      * 
      * @type {boolean}
-     * @memberof MessageAllOf
+     * @memberof Message
      */
     'hidden'?: boolean;
     /**
      * If the message has been revised, i.e. edited, fixed or had its status updated, this will be incremented. This number is managed by CD, and will not reflect correctly for messages newly synced from the platform
      * @type {number}
-     * @memberof MessageAllOf
+     * @memberof Message
      */
     'revision'?: number;
     /**
      * An ISO formatted timestamp
      * @type {string}
-     * @memberof MessageAllOf
+     * @memberof Message
      */
     'editedAt'?: string | null;
     /**
      * 
      * @type {MiscOptions}
-     * @memberof MessageAllOf
+     * @memberof Message
      */
     'miscOptions'?: MiscOptions;
     /**
      * 
      * @type {WABAConversationMetadata}
-     * @memberof MessageAllOf
+     * @memberof Message
      */
     'conversationMetadata'?: WABAConversationMetadata;
     /**
      * 
+     * @type {NLPTranscriptionJob}
+     * @memberof Message
+     */
+    'transcription'?: NLPTranscriptionJob;
+    /**
+     * 
      * @type {MessageAllOfReactionAction}
-     * @memberof MessageAllOf
+     * @memberof Message
      */
     'reactionAction'?: MessageAllOfReactionAction;
+    /**
+     * 
+     * @type {ReferencedPost}
+     * @memberof Message
+     */
+    'referencedPost'?: ReferencedPost;
 }
 
 
 /**
- * 
+ * @type MessageAllOfError
  * @export
- * @interface MessageAllOfError
  */
-export interface MessageAllOfError {
-    /**
-     * 
-     * @type {number}
-     * @memberof MessageAllOfError
-     */
-    'statusCode': number;
-    /**
-     * What the error was
-     * @type {string}
-     * @memberof MessageAllOfError
-     */
-    'message': string;
-    /**
-     * 
-     * @type {AppErrorData}
-     * @memberof MessageAllOfError
-     */
-    'data'?: AppErrorData;
-    /**
-     * 
-     * @type {number}
-     * @memberof MessageAllOfError
-     */
-    'retries': number;
-}
-/**
- * 
- * @export
- * @interface MessageAllOfErrorAllOf
- */
-export interface MessageAllOfErrorAllOf {
-    /**
-     * 
-     * @type {number}
-     * @memberof MessageAllOfErrorAllOf
-     */
-    'retries': number;
-}
+export type MessageAllOfError = MessageError | object;
+
 /**
  * Message describes a reaction to another message
  * @export
@@ -3655,43 +3699,6 @@ export interface MessageButton {
  */
 export interface MessageCompose {
     /**
-     * Specify the message Id -- can be used as an idempotency key. Ensures, that two messages with the same ID will never be sent twice 
-     * @type {string}
-     * @memberof MessageCompose
-     */
-    'id'?: string;
-    /**
-     * Set the status of the message, use to create notes
-     * @type {string}
-     * @memberof MessageCompose
-     */
-    'status'?: MessageComposeStatusEnum;
-    /**
-     * An ISO formatted timestamp
-     * @type {string}
-     * @memberof MessageCompose
-     */
-    'timestamp'?: string;
-    /**
-     * 
-     * @type {MiscOptions}
-     * @memberof MessageCompose
-     */
-    'miscOptions'?: MiscOptions;
-    /**
-     * parameters to replace in text
-     * @type {{ [key: string]: any; }}
-     * @memberof MessageCompose
-     */
-    'parameters'?: { [key: string]: any; };
-    /**
-     * 
-     * @type {MessageComposeAllOfSender}
-     * @memberof MessageCompose
-     * @deprecated
-     */
-    'sender'?: MessageComposeAllOfSender;
-    /**
      * 
      * @type {Array<string>}
      * @memberof MessageCompose
@@ -3727,6 +3734,12 @@ export interface MessageCompose {
      * @memberof MessageCompose
      */
     'failDecryption'?: boolean;
+    /**
+     * True, if the message is a comment
+     * @type {boolean}
+     * @memberof MessageCompose
+     */
+    'isComment'?: boolean;
     /**
      * 
      * @type {MessageContentAction}
@@ -3781,6 +3794,43 @@ export interface MessageCompose {
      * @memberof MessageCompose
      */
     'reactions'?: Array<MessageReaction> | null;
+    /**
+     * Specify the message Id -- can be used as an idempotency key. Ensures, that two messages with the same ID will never be sent twice 
+     * @type {string}
+     * @memberof MessageCompose
+     */
+    'id'?: string;
+    /**
+     * Set the status of the message, use to create notes
+     * @type {string}
+     * @memberof MessageCompose
+     */
+    'status'?: MessageComposeStatusEnum;
+    /**
+     * An ISO formatted timestamp
+     * @type {string}
+     * @memberof MessageCompose
+     */
+    'timestamp'?: string;
+    /**
+     * 
+     * @type {MiscOptions}
+     * @memberof MessageCompose
+     */
+    'miscOptions'?: MiscOptions;
+    /**
+     * parameters to replace in text
+     * @type {{ [key: string]: any; }}
+     * @memberof MessageCompose
+     */
+    'parameters'?: { [key: string]: any; };
+    /**
+     * 
+     * @type {MessageComposeAllOfSender}
+     * @memberof MessageCompose
+     * @deprecated
+     */
+    'sender'?: MessageComposeAllOfSender;
 }
 
 export const MessageComposeStatusEnum = {
@@ -3789,58 +3839,6 @@ export const MessageComposeStatusEnum = {
 } as const;
 
 export type MessageComposeStatusEnum = typeof MessageComposeStatusEnum[keyof typeof MessageComposeStatusEnum];
-
-/**
- * 
- * @export
- * @interface MessageComposeAllOf
- */
-export interface MessageComposeAllOf {
-    /**
-     * Specify the message Id -- can be used as an idempotency key. Ensures, that two messages with the same ID will never be sent twice 
-     * @type {string}
-     * @memberof MessageComposeAllOf
-     */
-    'id'?: string;
-    /**
-     * Set the status of the message, use to create notes
-     * @type {string}
-     * @memberof MessageComposeAllOf
-     */
-    'status'?: MessageComposeAllOfStatusEnum;
-    /**
-     * An ISO formatted timestamp
-     * @type {string}
-     * @memberof MessageComposeAllOf
-     */
-    'timestamp'?: string;
-    /**
-     * 
-     * @type {MiscOptions}
-     * @memberof MessageComposeAllOf
-     */
-    'miscOptions'?: MiscOptions;
-    /**
-     * parameters to replace in text
-     * @type {{ [key: string]: any; }}
-     * @memberof MessageComposeAllOf
-     */
-    'parameters'?: { [key: string]: any; };
-    /**
-     * 
-     * @type {MessageComposeAllOfSender}
-     * @memberof MessageComposeAllOf
-     * @deprecated
-     */
-    'sender'?: MessageComposeAllOfSender;
-}
-
-export const MessageComposeAllOfStatusEnum = {
-    Note: 'note',
-    Pending: 'pending'
-} as const;
-
-export type MessageComposeAllOfStatusEnum = typeof MessageComposeAllOfStatusEnum[keyof typeof MessageComposeAllOfStatusEnum];
 
 /**
  * 
@@ -3887,10 +3885,10 @@ export interface MessageComposeWChatID {
     'miscOptions'?: MiscOptions;
     /**
      * parameters to replace in text
-     * @type {{ [key: string]: any; }}
+     * @type {{ [key: string]: object; }}
      * @memberof MessageComposeWChatID
      */
-    'parameters'?: { [key: string]: any; };
+    'parameters'?: { [key: string]: object; };
     /**
      * 
      * @type {MessageComposeAllOfSender}
@@ -3934,6 +3932,12 @@ export interface MessageComposeWChatID {
      * @memberof MessageComposeWChatID
      */
     'failDecryption'?: boolean;
+    /**
+     * True, if the message is a comment
+     * @type {boolean}
+     * @memberof MessageComposeWChatID
+     */
+    'isComment'?: boolean;
     /**
      * 
      * @type {MessageContentAction}
@@ -4006,19 +4010,6 @@ export type MessageComposeWChatIDStatusEnum = typeof MessageComposeWChatIDStatus
 /**
  * 
  * @export
- * @interface MessageComposeWChatIDAllOf
- */
-export interface MessageComposeWChatIDAllOf {
-    /**
-     * ID for the contact/chat on the platform
-     * @type {string}
-     * @memberof MessageComposeWChatIDAllOf
-     */
-    'chatId': string;
-}
-/**
- * 
- * @export
  * @interface MessageContent
  */
 export interface MessageContent {
@@ -4058,6 +4049,12 @@ export interface MessageContent {
      * @memberof MessageContent
      */
     'failDecryption'?: boolean;
+    /**
+     * True, if the message is a comment
+     * @type {boolean}
+     * @memberof MessageContent
+     */
+    'isComment'?: boolean;
     /**
      * 
      * @type {MessageContentAction}
@@ -4174,6 +4171,62 @@ export interface MessageContentOrder {
      * @memberof MessageContentOrder
      */
     'total': Price;
+}
+/**
+ * 
+ * @export
+ * @interface MessageError
+ */
+export interface MessageError {
+    /**
+     * 
+     * @type {number}
+     * @memberof MessageError
+     */
+    'statusCode': number;
+    /**
+     * What the error was
+     * @type {string}
+     * @memberof MessageError
+     */
+    'message': string;
+    /**
+     * 
+     * @type {AppErrorData}
+     * @memberof MessageError
+     */
+    'data'?: AppErrorData;
+    /**
+     * Number of retries that have been attempted
+     * @type {number}
+     * @memberof MessageError
+     */
+    'retries': number;
+}
+/**
+ * 
+ * @export
+ * @interface MessageID
+ */
+export interface MessageID {
+    /**
+     * 
+     * @type {string}
+     * @memberof MessageID
+     */
+    'id': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof MessageID
+     */
+    'accountId': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof MessageID
+     */
+    'chatId': string;
 }
 /**
  * 
@@ -4383,6 +4436,19 @@ export type MessageStatus = typeof MessageStatus[keyof typeof MessageStatus];
 
 
 /**
+ * 
+ * @export
+ * @interface MessagesBulkActionRequest
+ */
+export interface MessagesBulkActionRequest {
+    /**
+     * 
+     * @type {BulkMessageAction}
+     * @memberof MessagesBulkActionRequest
+     */
+    'action': BulkMessageAction;
+}
+/**
  * @type MessagesForwardToChatIdParameter
  * @export
  */
@@ -4484,13 +4550,6 @@ export interface MessagesPatchRequest {
 export interface MessagesSearch200Response {
     /**
      * 
-     * @type {number}
-     * @memberof MessagesSearch200Response
-     * @deprecated
-     */
-    'nextPage'?: number;
-    /**
-     * 
      * @type {string}
      * @memberof MessagesSearch200Response
      */
@@ -4540,10 +4599,37 @@ export interface MessagingItems {
     'message'?: MessagingItemsMessage;
     /**
      * 
+     * @type {MessagingItemsDelivery}
+     * @memberof MessagingItems
+     */
+    'delivery'?: MessagingItemsDelivery;
+    /**
+     * 
+     * @type {MessagingItemsRead}
+     * @memberof MessagingItems
+     */
+    'read'?: MessagingItemsRead;
+    /**
+     * 
      * @type {MessagingItemsPostback}
      * @memberof MessagingItems
      */
     'postback'?: MessagingItemsPostback;
+}
+/**
+ * 
+ * @export
+ * @interface MessagingItemsDelivery
+ */
+export interface MessagingItemsDelivery {
+    [key: string]: any;
+
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof MessagingItemsDelivery
+     */
+    'mids'?: Array<string>;
 }
 /**
  * 
@@ -4565,10 +4651,31 @@ export interface MessagingItemsMessage {
     'text'?: string;
     /**
      * 
+     * @type {MessagingItemsMessageReplyTo}
+     * @memberof MessagingItemsMessage
+     */
+    'reply_to'?: MessagingItemsMessageReplyTo;
+    /**
+     * 
      * @type {Array<MessengerAttachmentItems>}
      * @memberof MessagingItemsMessage
      */
     'attachments'?: Array<MessengerAttachmentItems>;
+}
+/**
+ * 
+ * @export
+ * @interface MessagingItemsMessageReplyTo
+ */
+export interface MessagingItemsMessageReplyTo {
+    [key: string]: any;
+
+    /**
+     * 
+     * @type {string}
+     * @memberof MessagingItemsMessageReplyTo
+     */
+    'mid'?: string;
 }
 /**
  * 
@@ -4594,6 +4701,27 @@ export interface MessagingItemsPostback {
      * @memberof MessagingItemsPostback
      */
     'payload'?: string;
+}
+/**
+ * 
+ * @export
+ * @interface MessagingItemsRead
+ */
+export interface MessagingItemsRead {
+    [key: string]: any;
+
+    /**
+     * 
+     * @type {string}
+     * @memberof MessagingItemsRead
+     */
+    'mid'?: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof MessagingItemsRead
+     */
+    'watermark'?: number;
 }
 /**
  * 
@@ -4633,6 +4761,8 @@ export interface MessengerAttachmentItems {
  * @interface MessengerAttachmentItemsPayload
  */
 export interface MessengerAttachmentItemsPayload {
+    [key: string]: any;
+
     /**
      * 
      * @type {string}
@@ -4850,6 +4980,34 @@ export interface MultiMessageCompose {
      */
     'recipients': Array<MessageComposeWChatID>;
 }
+/**
+ * 
+ * @export
+ * @interface NLPTranscriptionJob
+ */
+export interface NLPTranscriptionJob {
+    /**
+     * 
+     * @type {string}
+     * @memberof NLPTranscriptionJob
+     */
+    'status': NLPTranscriptionJobStatusEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof NLPTranscriptionJob
+     */
+    'error'?: string;
+}
+
+export const NLPTranscriptionJobStatusEnum = {
+    InProgress: 'in-progress',
+    Completed: 'completed',
+    Failed: 'failed'
+} as const;
+
+export type NLPTranscriptionJobStatusEnum = typeof NLPTranscriptionJobStatusEnum[keyof typeof NLPTranscriptionJobStatusEnum];
+
 /**
  * 
  * @export
@@ -5146,7 +5304,7 @@ export interface PlatformProductCreate {
      * @type {string}
      * @memberof PlatformProductCreate
      */
-    'category'?: string | null;
+    'category'?: string;
     /**
      * List of URLs for images of the product
      * @type {Array<string>}
@@ -5207,7 +5365,7 @@ export interface PlatformProductUpdate {
      * @type {string}
      * @memberof PlatformProductUpdate
      */
-    'category'?: string | null;
+    'category'?: string;
     /**
      * List of URLs for images of the product
      * @type {Array<string>}
@@ -5325,34 +5483,6 @@ export interface Poll {
      */
     'maxSelections'?: number;
 }
-/**
- * 
- * @export
- * @interface PollChatHistory200Response
- */
-export interface PollChatHistory200Response {
-    /**
-     * 
-     * @type {string}
-     * @memberof PollChatHistory200Response
-     */
-    'url'?: string;
-    /**
-     * 
-     * @type {string}
-     * @memberof PollChatHistory200Response
-     */
-    'status'?: PollChatHistory200ResponseStatusEnum;
-}
-
-export const PollChatHistory200ResponseStatusEnum = {
-    Success: 'success',
-    Executing: 'executing',
-    Error: 'error'
-} as const;
-
-export type PollChatHistory200ResponseStatusEnum = typeof PollChatHistory200ResponseStatusEnum[keyof typeof PollChatHistory200ResponseStatusEnum];
-
 /**
  * 
  * @export
@@ -5595,6 +5725,70 @@ export interface QuotedMessage {
      */
     'jpegThumbnail'?: string | null;
 }
+/**
+ * 
+ * @export
+ * @interface ReferencedPost
+ */
+export interface ReferencedPost {
+    /**
+     * ID of the post
+     * @type {string}
+     * @memberof ReferencedPost
+     */
+    'id': string;
+    /**
+     * URL of the post
+     * @type {string}
+     * @memberof ReferencedPost
+     */
+    'url': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ReferencedPost
+     */
+    'type': ReferencedPostTypeEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof ReferencedPost
+     */
+    'caption': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ReferencedPost
+     */
+    'liveStatus'?: ReferencedPostLiveStatusEnum;
+    /**
+     * An ISO formatted timestamp
+     * @type {string}
+     * @memberof ReferencedPost
+     */
+    'createdAt': string;
+    /**
+     * URL of the preview image
+     * @type {string}
+     * @memberof ReferencedPost
+     */
+    'previewUrl'?: string;
+}
+
+export const ReferencedPostTypeEnum = {
+    LiveVideo: 'live_video',
+    Post: 'post',
+    Reel: 'reel'
+} as const;
+
+export type ReferencedPostTypeEnum = typeof ReferencedPostTypeEnum[keyof typeof ReferencedPostTypeEnum];
+export const ReferencedPostLiveStatusEnum = {
+    Ongoing: 'ongoing',
+    Ended: 'ended'
+} as const;
+
+export type ReferencedPostLiveStatusEnum = typeof ReferencedPostLiveStatusEnum[keyof typeof ReferencedPostLiveStatusEnum];
+
 /**
  * 
  * @export
@@ -6349,13 +6543,13 @@ export interface WebhookSmsLimitPostRequest {
 export const AccountApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * 
-         * @summary Archive an account. Logs out of the account & removes all synced chats, messages. Keeps contacts, and notes.
+         * Logs out of the account & removes all synced chats, messages. Keeps contacts, and notes.
+         * @summary Archive an account\'s resyncable data.
          * @param {string} accountId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        accountsArchive: async (accountId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        accountsArchive: async (accountId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('accountsArchive', 'accountId', accountId)
             const localVarPath = `/accounts/{accountId}/archive`
@@ -6390,11 +6584,11 @@ export const AccountApiAxiosParamCreator = function (configuration?: Configurati
          * 
          * @summary Close connection to the account
          * @param {string} accountId 
-         * @param {boolean} [logout] Closes the account and logs out from the account
+         * @param {boolean} [logout] Closes the account and logs out from the accounts. Will require user interaction (eg. scan QR) to open it again 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        accountsClose: async (accountId: string, logout?: boolean, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        accountsClose: async (accountId: string, logout?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('accountsClose', 'accountId', accountId)
             const localVarPath = `/accounts/{accountId}/close`
@@ -6437,7 +6631,7 @@ export const AccountApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        accountsDelete: async (accountId: string, deleteNow?: boolean, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        accountsDelete: async (accountId: string, deleteNow?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('accountsDelete', 'accountId', accountId)
             const localVarPath = `/accounts/{accountId}`
@@ -6486,7 +6680,7 @@ export const AccountApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        accountsGet: async (q?: string, page?: number, count?: number, type?: AccountType, all?: boolean, state?: AccountState, returnCount?: boolean, teamId?: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        accountsGet: async (q?: string, page?: number, count?: number, type?: AccountType, all?: boolean, state?: AccountState, returnCount?: boolean, teamId?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/accounts`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -6548,50 +6742,12 @@ export const AccountApiAxiosParamCreator = function (configuration?: Configurati
         },
         /**
          * 
-         * @summary Logout and clear credentials from the account
-         * @param {string} accountId 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        accountsLogout: async (accountId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'accountId' is not null or undefined
-            assertParamExists('accountsLogout', 'accountId', accountId)
-            const localVarPath = `/accounts/{accountId}/logout`
-                .replace(`{${"accountId"}}`, encodeURIComponent(String(accountId)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            // authentication chatdaddy required
-            // oauth required
-            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", ["ACCOUNT_PATCH"], configuration)
-
-
-    
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * 
          * @summary Open connection to the account
          * @param {string} accountId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        accountsOpen: async (accountId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        accountsOpen: async (accountId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('accountsOpen', 'accountId', accountId)
             const localVarPath = `/accounts/{accountId}/open`
@@ -6630,7 +6786,7 @@ export const AccountApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        accountsPatch: async (accountId: string, accountsPatchRequest?: AccountsPatchRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        accountsPatch: async (accountId: string, accountsPatchRequest?: AccountsPatchRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('accountsPatch', 'accountId', accountId)
             const localVarPath = `/accounts/{accountId}`
@@ -6671,7 +6827,7 @@ export const AccountApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        accountsPost: async (accountsPostRequest?: AccountsPostRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        accountsPost: async (accountsPostRequest?: AccountsPostRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/accounts`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -6703,14 +6859,14 @@ export const AccountApiAxiosParamCreator = function (configuration?: Configurati
             };
         },
         /**
-         * 
+         * WA supports login either by QR code or by OTP. This API allows changing the login mode. 
          * @summary Change login mode of a WhatsApp account
          * @param {string} accountId 
          * @param {AccountWaChangeLoginMode} [accountWaChangeLoginMode] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        waChangeLoginMode: async (accountId: string, accountWaChangeLoginMode?: AccountWaChangeLoginMode, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        waChangeLoginMode: async (accountId: string, accountWaChangeLoginMode?: AccountWaChangeLoginMode, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('waChangeLoginMode', 'accountId', accountId)
             const localVarPath = `/accounts/wa/{accountId}/change-login-mode`
@@ -6755,27 +6911,31 @@ export const AccountApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = AccountApiAxiosParamCreator(configuration)
     return {
         /**
-         * 
-         * @summary Archive an account. Logs out of the account & removes all synced chats, messages. Keeps contacts, and notes.
+         * Logs out of the account & removes all synced chats, messages. Keeps contacts, and notes.
+         * @summary Archive an account\'s resyncable data.
          * @param {string} accountId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async accountsArchive(accountId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async accountsArchive(accountId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.accountsArchive(accountId, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AccountApi.accountsArchive']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
          * @summary Close connection to the account
          * @param {string} accountId 
-         * @param {boolean} [logout] Closes the account and logs out from the account
+         * @param {boolean} [logout] Closes the account and logs out from the accounts. Will require user interaction (eg. scan QR) to open it again 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async accountsClose(accountId: string, logout?: boolean, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async accountsClose(accountId: string, logout?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.accountsClose(accountId, logout, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AccountApi.accountsClose']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * You can continue to poll this route to check if it has been deleted. When deleted, the route will return a 404.
@@ -6785,9 +6945,11 @@ export const AccountApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async accountsDelete(accountId: string, deleteNow?: boolean, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async accountsDelete(accountId: string, deleteNow?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.accountsDelete(accountId, deleteNow, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AccountApi.accountsDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -6803,20 +6965,11 @@ export const AccountApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async accountsGet(q?: string, page?: number, count?: number, type?: AccountType, all?: boolean, state?: AccountState, returnCount?: boolean, teamId?: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsGet200Response>> {
+        async accountsGet(q?: string, page?: number, count?: number, type?: AccountType, all?: boolean, state?: AccountState, returnCount?: boolean, teamId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsGet200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.accountsGet(q, page, count, type, all, state, returnCount, teamId, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
-        },
-        /**
-         * 
-         * @summary Logout and clear credentials from the account
-         * @param {string} accountId 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async accountsLogout(accountId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.accountsLogout(accountId, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AccountApi.accountsGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -6825,9 +6978,11 @@ export const AccountApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async accountsOpen(accountId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async accountsOpen(accountId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.accountsOpen(accountId, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AccountApi.accountsOpen']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * Update name of the account or its settings
@@ -6837,9 +6992,11 @@ export const AccountApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async accountsPatch(accountId: string, accountsPatchRequest?: AccountsPatchRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async accountsPatch(accountId: string, accountsPatchRequest?: AccountsPatchRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.accountsPatch(accountId, accountsPatchRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AccountApi.accountsPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -6848,21 +7005,25 @@ export const AccountApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async accountsPost(accountsPostRequest?: AccountsPostRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Account>> {
+        async accountsPost(accountsPostRequest?: AccountsPostRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Account>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.accountsPost(accountsPostRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AccountApi.accountsPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * 
+         * WA supports login either by QR code or by OTP. This API allows changing the login mode. 
          * @summary Change login mode of a WhatsApp account
          * @param {string} accountId 
          * @param {AccountWaChangeLoginMode} [accountWaChangeLoginMode] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async waChangeLoginMode(accountId: string, accountWaChangeLoginMode?: AccountWaChangeLoginMode, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async waChangeLoginMode(accountId: string, accountWaChangeLoginMode?: AccountWaChangeLoginMode, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.waChangeLoginMode(accountId, accountWaChangeLoginMode, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AccountApi.waChangeLoginMode']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -6875,13 +7036,13 @@ export const AccountApiFactory = function (configuration?: Configuration, basePa
     const localVarFp = AccountApiFp(configuration)
     return {
         /**
-         * 
-         * @summary Archive an account. Logs out of the account & removes all synced chats, messages. Keeps contacts, and notes.
+         * Logs out of the account & removes all synced chats, messages. Keeps contacts, and notes.
+         * @summary Archive an account\'s resyncable data.
          * @param {AccountApiAccountsArchiveRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        accountsArchive(requestParameters: AccountApiAccountsArchiveRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        accountsArchive(requestParameters: AccountApiAccountsArchiveRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.accountsArchive(requestParameters.accountId, options).then((request) => request(axios, basePath));
         },
         /**
@@ -6891,7 +7052,7 @@ export const AccountApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        accountsClose(requestParameters: AccountApiAccountsCloseRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        accountsClose(requestParameters: AccountApiAccountsCloseRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.accountsClose(requestParameters.accountId, requestParameters.logout, options).then((request) => request(axios, basePath));
         },
         /**
@@ -6901,7 +7062,7 @@ export const AccountApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        accountsDelete(requestParameters: AccountApiAccountsDeleteRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        accountsDelete(requestParameters: AccountApiAccountsDeleteRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.accountsDelete(requestParameters.accountId, requestParameters.deleteNow, options).then((request) => request(axios, basePath));
         },
         /**
@@ -6911,18 +7072,8 @@ export const AccountApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        accountsGet(requestParameters: AccountApiAccountsGetRequest = {}, options?: AxiosRequestConfig): AxiosPromise<AccountsGet200Response> {
+        accountsGet(requestParameters: AccountApiAccountsGetRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<AccountsGet200Response> {
             return localVarFp.accountsGet(requestParameters.q, requestParameters.page, requestParameters.count, requestParameters.type, requestParameters.all, requestParameters.state, requestParameters.returnCount, requestParameters.teamId, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * 
-         * @summary Logout and clear credentials from the account
-         * @param {AccountApiAccountsLogoutRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        accountsLogout(requestParameters: AccountApiAccountsLogoutRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
-            return localVarFp.accountsLogout(requestParameters.accountId, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -6931,7 +7082,7 @@ export const AccountApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        accountsOpen(requestParameters: AccountApiAccountsOpenRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        accountsOpen(requestParameters: AccountApiAccountsOpenRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.accountsOpen(requestParameters.accountId, options).then((request) => request(axios, basePath));
         },
         /**
@@ -6941,7 +7092,7 @@ export const AccountApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        accountsPatch(requestParameters: AccountApiAccountsPatchRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        accountsPatch(requestParameters: AccountApiAccountsPatchRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.accountsPatch(requestParameters.accountId, requestParameters.accountsPatchRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -6951,17 +7102,17 @@ export const AccountApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        accountsPost(requestParameters: AccountApiAccountsPostRequest = {}, options?: AxiosRequestConfig): AxiosPromise<Account> {
+        accountsPost(requestParameters: AccountApiAccountsPostRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<Account> {
             return localVarFp.accountsPost(requestParameters.accountsPostRequest, options).then((request) => request(axios, basePath));
         },
         /**
-         * 
+         * WA supports login either by QR code or by OTP. This API allows changing the login mode. 
          * @summary Change login mode of a WhatsApp account
          * @param {AccountApiWaChangeLoginModeRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        waChangeLoginMode(requestParameters: AccountApiWaChangeLoginModeRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        waChangeLoginMode(requestParameters: AccountApiWaChangeLoginModeRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.waChangeLoginMode(requestParameters.accountId, requestParameters.accountWaChangeLoginMode, options).then((request) => request(axios, basePath));
         },
     };
@@ -6995,7 +7146,7 @@ export interface AccountApiAccountsCloseRequest {
     readonly accountId: string
 
     /**
-     * Closes the account and logs out from the account
+     * Closes the account and logs out from the accounts. Will require user interaction (eg. scan QR) to open it again 
      * @type {boolean}
      * @memberof AccountApiAccountsClose
      */
@@ -7087,20 +7238,6 @@ export interface AccountApiAccountsGetRequest {
 }
 
 /**
- * Request parameters for accountsLogout operation in AccountApi.
- * @export
- * @interface AccountApiAccountsLogoutRequest
- */
-export interface AccountApiAccountsLogoutRequest {
-    /**
-     * 
-     * @type {string}
-     * @memberof AccountApiAccountsLogout
-     */
-    readonly accountId: string
-}
-
-/**
  * Request parameters for accountsOpen operation in AccountApi.
  * @export
  * @interface AccountApiAccountsOpenRequest
@@ -7178,14 +7315,14 @@ export interface AccountApiWaChangeLoginModeRequest {
  */
 export class AccountApi extends BaseAPI {
     /**
-     * 
-     * @summary Archive an account. Logs out of the account & removes all synced chats, messages. Keeps contacts, and notes.
+     * Logs out of the account & removes all synced chats, messages. Keeps contacts, and notes.
+     * @summary Archive an account\'s resyncable data.
      * @param {AccountApiAccountsArchiveRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof AccountApi
      */
-    public accountsArchive(requestParameters: AccountApiAccountsArchiveRequest, options?: AxiosRequestConfig) {
+    public accountsArchive(requestParameters: AccountApiAccountsArchiveRequest, options?: RawAxiosRequestConfig) {
         return AccountApiFp(this.configuration).accountsArchive(requestParameters.accountId, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -7197,7 +7334,7 @@ export class AccountApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AccountApi
      */
-    public accountsClose(requestParameters: AccountApiAccountsCloseRequest, options?: AxiosRequestConfig) {
+    public accountsClose(requestParameters: AccountApiAccountsCloseRequest, options?: RawAxiosRequestConfig) {
         return AccountApiFp(this.configuration).accountsClose(requestParameters.accountId, requestParameters.logout, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -7209,7 +7346,7 @@ export class AccountApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AccountApi
      */
-    public accountsDelete(requestParameters: AccountApiAccountsDeleteRequest, options?: AxiosRequestConfig) {
+    public accountsDelete(requestParameters: AccountApiAccountsDeleteRequest, options?: RawAxiosRequestConfig) {
         return AccountApiFp(this.configuration).accountsDelete(requestParameters.accountId, requestParameters.deleteNow, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -7221,20 +7358,8 @@ export class AccountApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AccountApi
      */
-    public accountsGet(requestParameters: AccountApiAccountsGetRequest = {}, options?: AxiosRequestConfig) {
+    public accountsGet(requestParameters: AccountApiAccountsGetRequest = {}, options?: RawAxiosRequestConfig) {
         return AccountApiFp(this.configuration).accountsGet(requestParameters.q, requestParameters.page, requestParameters.count, requestParameters.type, requestParameters.all, requestParameters.state, requestParameters.returnCount, requestParameters.teamId, options).then((request) => request(this.axios, this.basePath));
-    }
-
-    /**
-     * 
-     * @summary Logout and clear credentials from the account
-     * @param {AccountApiAccountsLogoutRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof AccountApi
-     */
-    public accountsLogout(requestParameters: AccountApiAccountsLogoutRequest, options?: AxiosRequestConfig) {
-        return AccountApiFp(this.configuration).accountsLogout(requestParameters.accountId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -7245,7 +7370,7 @@ export class AccountApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AccountApi
      */
-    public accountsOpen(requestParameters: AccountApiAccountsOpenRequest, options?: AxiosRequestConfig) {
+    public accountsOpen(requestParameters: AccountApiAccountsOpenRequest, options?: RawAxiosRequestConfig) {
         return AccountApiFp(this.configuration).accountsOpen(requestParameters.accountId, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -7257,7 +7382,7 @@ export class AccountApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AccountApi
      */
-    public accountsPatch(requestParameters: AccountApiAccountsPatchRequest, options?: AxiosRequestConfig) {
+    public accountsPatch(requestParameters: AccountApiAccountsPatchRequest, options?: RawAxiosRequestConfig) {
         return AccountApiFp(this.configuration).accountsPatch(requestParameters.accountId, requestParameters.accountsPatchRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -7269,22 +7394,23 @@ export class AccountApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AccountApi
      */
-    public accountsPost(requestParameters: AccountApiAccountsPostRequest = {}, options?: AxiosRequestConfig) {
+    public accountsPost(requestParameters: AccountApiAccountsPostRequest = {}, options?: RawAxiosRequestConfig) {
         return AccountApiFp(this.configuration).accountsPost(requestParameters.accountsPostRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
-     * 
+     * WA supports login either by QR code or by OTP. This API allows changing the login mode. 
      * @summary Change login mode of a WhatsApp account
      * @param {AccountApiWaChangeLoginModeRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof AccountApi
      */
-    public waChangeLoginMode(requestParameters: AccountApiWaChangeLoginModeRequest, options?: AxiosRequestConfig) {
+    public waChangeLoginMode(requestParameters: AccountApiWaChangeLoginModeRequest, options?: RawAxiosRequestConfig) {
         return AccountApiFp(this.configuration).waChangeLoginMode(requestParameters.accountId, requestParameters.accountWaChangeLoginMode, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -7301,7 +7427,7 @@ export const AlibabaCamsApiAxiosParamCreator = function (configuration?: Configu
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        alibabaCamsIsvTerms: async (accountId: string, alibabaCAMSISVTerms?: AlibabaCAMSISVTerms, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        alibabaCamsIsvTerms: async (accountId: string, alibabaCAMSISVTerms?: AlibabaCAMSISVTerms, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('alibabaCamsIsvTerms', 'accountId', accountId)
             const localVarPath = `/alibaba-cams/isv-terms/{accountId}`
@@ -7341,7 +7467,7 @@ export const AlibabaCamsApiAxiosParamCreator = function (configuration?: Configu
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        alibabaCamsMetadata: async (options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        alibabaCamsMetadata: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/alibaba-cams/metadata`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -7377,7 +7503,7 @@ export const AlibabaCamsApiAxiosParamCreator = function (configuration?: Configu
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        alibabaCamsProfileUpdate: async (accountId: string, alibabaCamsProfileUpdateRequest?: AlibabaCamsProfileUpdateRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        alibabaCamsProfileUpdate: async (accountId: string, alibabaCamsProfileUpdateRequest?: AlibabaCamsProfileUpdateRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('alibabaCamsProfileUpdate', 'accountId', accountId)
             const localVarPath = `/alibaba-cams/profile/{accountId}`
@@ -7419,7 +7545,7 @@ export const AlibabaCamsApiAxiosParamCreator = function (configuration?: Configu
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        alibabaCamsRegister: async (accountId: string, alibabaCamsRegisterRequest?: AlibabaCamsRegisterRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        alibabaCamsRegister: async (accountId: string, alibabaCamsRegisterRequest?: AlibabaCamsRegisterRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('alibabaCamsRegister', 'accountId', accountId)
             const localVarPath = `/alibaba-cams/register/{accountId}`
@@ -7461,7 +7587,7 @@ export const AlibabaCamsApiAxiosParamCreator = function (configuration?: Configu
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        alibabaCamsSync: async (accountId: string, alibabaCamsSyncRequest?: AlibabaCamsSyncRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        alibabaCamsSync: async (accountId: string, alibabaCamsSyncRequest?: AlibabaCamsSyncRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('alibabaCamsSync', 'accountId', accountId)
             const localVarPath = `/alibaba-cams/sync/{accountId}`
@@ -7504,7 +7630,7 @@ export const AlibabaCamsApiAxiosParamCreator = function (configuration?: Configu
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        webhookAlibabaCamsPost: async (accountId: string, secret: string, alibabaCAMSWebhookItem?: Array<AlibabaCAMSWebhookItem>, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        webhookAlibabaCamsPost: async (accountId: string, secret: string, alibabaCAMSWebhookItem?: Array<AlibabaCAMSWebhookItem>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('webhookAlibabaCamsPost', 'accountId', accountId)
             // verify required parameter 'secret' is not null or undefined
@@ -7555,9 +7681,11 @@ export const AlibabaCamsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async alibabaCamsIsvTerms(accountId: string, alibabaCAMSISVTerms?: AlibabaCAMSISVTerms, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async alibabaCamsIsvTerms(accountId: string, alibabaCAMSISVTerms?: AlibabaCAMSISVTerms, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.alibabaCamsIsvTerms(accountId, alibabaCAMSISVTerms, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AlibabaCamsApi.alibabaCamsIsvTerms']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -7565,9 +7693,11 @@ export const AlibabaCamsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async alibabaCamsMetadata(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AlibabaCamsMetadata200Response>> {
+        async alibabaCamsMetadata(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AlibabaCamsMetadata200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.alibabaCamsMetadata(options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AlibabaCamsApi.alibabaCamsMetadata']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -7577,9 +7707,11 @@ export const AlibabaCamsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async alibabaCamsProfileUpdate(accountId: string, alibabaCamsProfileUpdateRequest?: AlibabaCamsProfileUpdateRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async alibabaCamsProfileUpdate(accountId: string, alibabaCamsProfileUpdateRequest?: AlibabaCamsProfileUpdateRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.alibabaCamsProfileUpdate(accountId, alibabaCamsProfileUpdateRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AlibabaCamsApi.alibabaCamsProfileUpdate']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -7589,9 +7721,11 @@ export const AlibabaCamsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async alibabaCamsRegister(accountId: string, alibabaCamsRegisterRequest?: AlibabaCamsRegisterRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AlibabaCamsRegister200Response>> {
+        async alibabaCamsRegister(accountId: string, alibabaCamsRegisterRequest?: AlibabaCamsRegisterRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AlibabaCamsRegister200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.alibabaCamsRegister(accountId, alibabaCamsRegisterRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AlibabaCamsApi.alibabaCamsRegister']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -7601,9 +7735,11 @@ export const AlibabaCamsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async alibabaCamsSync(accountId: string, alibabaCamsSyncRequest?: AlibabaCamsSyncRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AlibabaCamsSync200Response>> {
+        async alibabaCamsSync(accountId: string, alibabaCamsSyncRequest?: AlibabaCamsSyncRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AlibabaCamsSync200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.alibabaCamsSync(accountId, alibabaCamsSyncRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AlibabaCamsApi.alibabaCamsSync']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -7614,9 +7750,11 @@ export const AlibabaCamsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async webhookAlibabaCamsPost(accountId: string, secret: string, alibabaCAMSWebhookItem?: Array<AlibabaCAMSWebhookItem>, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async webhookAlibabaCamsPost(accountId: string, secret: string, alibabaCAMSWebhookItem?: Array<AlibabaCAMSWebhookItem>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.webhookAlibabaCamsPost(accountId, secret, alibabaCAMSWebhookItem, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AlibabaCamsApi.webhookAlibabaCamsPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -7635,7 +7773,7 @@ export const AlibabaCamsApiFactory = function (configuration?: Configuration, ba
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        alibabaCamsIsvTerms(requestParameters: AlibabaCamsApiAlibabaCamsIsvTermsRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        alibabaCamsIsvTerms(requestParameters: AlibabaCamsApiAlibabaCamsIsvTermsRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.alibabaCamsIsvTerms(requestParameters.accountId, requestParameters.alibabaCAMSISVTerms, options).then((request) => request(axios, basePath));
         },
         /**
@@ -7644,7 +7782,7 @@ export const AlibabaCamsApiFactory = function (configuration?: Configuration, ba
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        alibabaCamsMetadata(options?: AxiosRequestConfig): AxiosPromise<AlibabaCamsMetadata200Response> {
+        alibabaCamsMetadata(options?: RawAxiosRequestConfig): AxiosPromise<AlibabaCamsMetadata200Response> {
             return localVarFp.alibabaCamsMetadata(options).then((request) => request(axios, basePath));
         },
         /**
@@ -7654,7 +7792,7 @@ export const AlibabaCamsApiFactory = function (configuration?: Configuration, ba
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        alibabaCamsProfileUpdate(requestParameters: AlibabaCamsApiAlibabaCamsProfileUpdateRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        alibabaCamsProfileUpdate(requestParameters: AlibabaCamsApiAlibabaCamsProfileUpdateRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.alibabaCamsProfileUpdate(requestParameters.accountId, requestParameters.alibabaCamsProfileUpdateRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -7664,7 +7802,7 @@ export const AlibabaCamsApiFactory = function (configuration?: Configuration, ba
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        alibabaCamsRegister(requestParameters: AlibabaCamsApiAlibabaCamsRegisterRequest, options?: AxiosRequestConfig): AxiosPromise<AlibabaCamsRegister200Response> {
+        alibabaCamsRegister(requestParameters: AlibabaCamsApiAlibabaCamsRegisterRequest, options?: RawAxiosRequestConfig): AxiosPromise<AlibabaCamsRegister200Response> {
             return localVarFp.alibabaCamsRegister(requestParameters.accountId, requestParameters.alibabaCamsRegisterRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -7674,7 +7812,7 @@ export const AlibabaCamsApiFactory = function (configuration?: Configuration, ba
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        alibabaCamsSync(requestParameters: AlibabaCamsApiAlibabaCamsSyncRequest, options?: AxiosRequestConfig): AxiosPromise<AlibabaCamsSync200Response> {
+        alibabaCamsSync(requestParameters: AlibabaCamsApiAlibabaCamsSyncRequest, options?: RawAxiosRequestConfig): AxiosPromise<AlibabaCamsSync200Response> {
             return localVarFp.alibabaCamsSync(requestParameters.accountId, requestParameters.alibabaCamsSyncRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -7684,7 +7822,7 @@ export const AlibabaCamsApiFactory = function (configuration?: Configuration, ba
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        webhookAlibabaCamsPost(requestParameters: AlibabaCamsApiWebhookAlibabaCamsPostRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        webhookAlibabaCamsPost(requestParameters: AlibabaCamsApiWebhookAlibabaCamsPostRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.webhookAlibabaCamsPost(requestParameters.accountId, requestParameters.secret, requestParameters.alibabaCAMSWebhookItem, options).then((request) => request(axios, basePath));
         },
     };
@@ -7817,7 +7955,7 @@ export class AlibabaCamsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AlibabaCamsApi
      */
-    public alibabaCamsIsvTerms(requestParameters: AlibabaCamsApiAlibabaCamsIsvTermsRequest, options?: AxiosRequestConfig) {
+    public alibabaCamsIsvTerms(requestParameters: AlibabaCamsApiAlibabaCamsIsvTermsRequest, options?: RawAxiosRequestConfig) {
         return AlibabaCamsApiFp(this.configuration).alibabaCamsIsvTerms(requestParameters.accountId, requestParameters.alibabaCAMSISVTerms, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -7828,7 +7966,7 @@ export class AlibabaCamsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AlibabaCamsApi
      */
-    public alibabaCamsMetadata(options?: AxiosRequestConfig) {
+    public alibabaCamsMetadata(options?: RawAxiosRequestConfig) {
         return AlibabaCamsApiFp(this.configuration).alibabaCamsMetadata(options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -7840,7 +7978,7 @@ export class AlibabaCamsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AlibabaCamsApi
      */
-    public alibabaCamsProfileUpdate(requestParameters: AlibabaCamsApiAlibabaCamsProfileUpdateRequest, options?: AxiosRequestConfig) {
+    public alibabaCamsProfileUpdate(requestParameters: AlibabaCamsApiAlibabaCamsProfileUpdateRequest, options?: RawAxiosRequestConfig) {
         return AlibabaCamsApiFp(this.configuration).alibabaCamsProfileUpdate(requestParameters.accountId, requestParameters.alibabaCamsProfileUpdateRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -7852,7 +7990,7 @@ export class AlibabaCamsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AlibabaCamsApi
      */
-    public alibabaCamsRegister(requestParameters: AlibabaCamsApiAlibabaCamsRegisterRequest, options?: AxiosRequestConfig) {
+    public alibabaCamsRegister(requestParameters: AlibabaCamsApiAlibabaCamsRegisterRequest, options?: RawAxiosRequestConfig) {
         return AlibabaCamsApiFp(this.configuration).alibabaCamsRegister(requestParameters.accountId, requestParameters.alibabaCamsRegisterRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -7864,7 +8002,7 @@ export class AlibabaCamsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AlibabaCamsApi
      */
-    public alibabaCamsSync(requestParameters: AlibabaCamsApiAlibabaCamsSyncRequest, options?: AxiosRequestConfig) {
+    public alibabaCamsSync(requestParameters: AlibabaCamsApiAlibabaCamsSyncRequest, options?: RawAxiosRequestConfig) {
         return AlibabaCamsApiFp(this.configuration).alibabaCamsSync(requestParameters.accountId, requestParameters.alibabaCamsSyncRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -7876,10 +8014,11 @@ export class AlibabaCamsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AlibabaCamsApi
      */
-    public webhookAlibabaCamsPost(requestParameters: AlibabaCamsApiWebhookAlibabaCamsPostRequest, options?: AxiosRequestConfig) {
+    public webhookAlibabaCamsPost(requestParameters: AlibabaCamsApiWebhookAlibabaCamsPostRequest, options?: RawAxiosRequestConfig) {
         return AlibabaCamsApiFp(this.configuration).webhookAlibabaCamsPost(requestParameters.accountId, requestParameters.secret, requestParameters.alibabaCAMSWebhookItem, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -7891,11 +8030,90 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
         /**
          * 
          * @summary Create a new CRM ticket
+         * @param {CrmTicketBulkPost} [crmTicketBulkPost] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        bulkCreateTickets: async (crmTicketBulkPost?: CrmTicketBulkPost, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/crm/bulk/tickets`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication chatdaddy required
+            // oauth required
+            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", [], configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(crmTicketBulkPost, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary Delete multiple CRM tickets
+         * @param {Array<string>} ids Ticket IDs to delete
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        bulkDeleteTickets: async (ids: Array<string>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'ids' is not null or undefined
+            assertParamExists('bulkDeleteTickets', 'ids', ids)
+            const localVarPath = `/crm/bulk/tickets`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication chatdaddy required
+            // oauth required
+            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", [], configuration)
+
+            if (ids) {
+                localVarQueryParameter['ids'] = ids;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary Create a new CRM ticket
          * @param {CrmTicketPost} [crmTicketPost] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        createTicket: async (crmTicketPost?: CrmTicketPost, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        createTicket: async (crmTicketPost?: CrmTicketPost, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/crm/tickets`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -7933,7 +8151,7 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        crmBoardDelete: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        crmBoardDelete: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('crmBoardDelete', 'id', id)
             const localVarPath = `/crm/boards/{id}`
@@ -7966,11 +8184,11 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
         },
         /**
          * 
-         * @summary Get CRM Board data
+         * @summary Get All CRM Boards for the Team
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        crmBoardGet: async (options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        crmBoardGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/crm/boards`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -8006,7 +8224,7 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        crmBoardPatch: async (id: string, crmBoardPatch?: CrmBoardPatch, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        crmBoardPatch: async (id: string, crmBoardPatch?: CrmBoardPatch, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('crmBoardPatch', 'id', id)
             const localVarPath = `/crm/boards/{id}`
@@ -8047,7 +8265,7 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        crmBoardPost: async (crmBoardPost?: CrmBoardPost, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        crmBoardPost: async (crmBoardPost?: CrmBoardPost, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/crm/boards`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -8085,7 +8303,7 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deleteTicket: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        deleteTicket: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('deleteTicket', 'id', id)
             const localVarPath = `/crm/tickets/{id}`
@@ -8132,7 +8350,7 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getTickets: async (count?: number, page?: string, boardId?: string, stageId?: string, contactId?: UniqueContactID, id?: Array<string>, returnTotalCount?: boolean, q?: string, tags?: ChatsGetTagsParameter, assignee?: ChatsGetAssigneeParameter, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getTickets: async (count?: number, page?: string, boardId?: string, stageId?: string, contactId?: UniqueContactID, id?: Array<string>, returnTotalCount?: boolean, q?: string, tags?: ChatsGetTagsParameter, assignee?: ChatsGetAssigneeParameter, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/crm/tickets`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -8215,7 +8433,7 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getTicketsByStage: async (count?: number, page?: string, boardId?: string, stageId?: string, contactId?: UniqueContactID, returnTotalCount?: boolean, q?: string, tags?: ChatsGetTagsParameter, assignee?: ChatsGetAssigneeParameter, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getTicketsByStage: async (count?: number, page?: string, boardId?: string, stageId?: string, contactId?: UniqueContactID, returnTotalCount?: boolean, q?: string, tags?: ChatsGetTagsParameter, assignee?: ChatsGetAssigneeParameter, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/crm/tickets/by-stage`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -8287,7 +8505,7 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        startTicketTimer: async (id: string, ticketTimerCreate?: TicketTimerCreate, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        startTicketTimer: async (id: string, ticketTimerCreate?: TicketTimerCreate, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('startTicketTimer', 'id', id)
             const localVarPath = `/crm/tickets/{id}/timer/start`
@@ -8328,7 +8546,7 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        stopTicketTimer: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        stopTicketTimer: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('stopTicketTimer', 'id', id)
             const localVarPath = `/crm/tickets/{id}/timer/stop`
@@ -8367,7 +8585,7 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        updateTicket: async (id: string, crmTicketPatch?: CrmTicketPatch, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        updateTicket: async (id: string, crmTicketPatch?: CrmTicketPatch, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('updateTicket', 'id', id)
             const localVarPath = `/crm/tickets/{id}`
@@ -8414,13 +8632,41 @@ export const CRMApiFp = function(configuration?: Configuration) {
         /**
          * 
          * @summary Create a new CRM ticket
+         * @param {CrmTicketBulkPost} [crmTicketBulkPost] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async bulkCreateTickets(crmTicketBulkPost?: CrmTicketBulkPost, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<CrmTicket>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.bulkCreateTickets(crmTicketBulkPost, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.bulkCreateTickets']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @summary Delete multiple CRM tickets
+         * @param {Array<string>} ids Ticket IDs to delete
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async bulkDeleteTickets(ids: Array<string>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.bulkDeleteTickets(ids, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.bulkDeleteTickets']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @summary Create a new CRM ticket
          * @param {CrmTicketPost} [crmTicketPost] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async createTicket(crmTicketPost?: CrmTicketPost, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmTicket>> {
+        async createTicket(crmTicketPost?: CrmTicketPost, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmTicket>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.createTicket(crmTicketPost, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.createTicket']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -8429,19 +8675,23 @@ export const CRMApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async crmBoardDelete(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async crmBoardDelete(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.crmBoardDelete(id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.crmBoardDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
-         * @summary Get CRM Board data
+         * @summary Get All CRM Boards for the Team
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async crmBoardGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmBoardGet200Response>> {
+        async crmBoardGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmBoardGet200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.crmBoardGet(options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.crmBoardGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -8451,9 +8701,11 @@ export const CRMApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async crmBoardPatch(id: string, crmBoardPatch?: CrmBoardPatch, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmBoard>> {
+        async crmBoardPatch(id: string, crmBoardPatch?: CrmBoardPatch, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmBoard>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.crmBoardPatch(id, crmBoardPatch, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.crmBoardPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -8462,9 +8714,11 @@ export const CRMApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async crmBoardPost(crmBoardPost?: CrmBoardPost, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmBoard>> {
+        async crmBoardPost(crmBoardPost?: CrmBoardPost, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmBoard>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.crmBoardPost(crmBoardPost, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.crmBoardPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -8473,9 +8727,11 @@ export const CRMApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async deleteTicket(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async deleteTicket(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.deleteTicket(id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.deleteTicket']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -8493,9 +8749,11 @@ export const CRMApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getTickets(count?: number, page?: string, boardId?: string, stageId?: string, contactId?: UniqueContactID, id?: Array<string>, returnTotalCount?: boolean, q?: string, tags?: ChatsGetTagsParameter, assignee?: ChatsGetAssigneeParameter, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmTicketsPage>> {
+        async getTickets(count?: number, page?: string, boardId?: string, stageId?: string, contactId?: UniqueContactID, id?: Array<string>, returnTotalCount?: boolean, q?: string, tags?: ChatsGetTagsParameter, assignee?: ChatsGetAssigneeParameter, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmTicketsPage>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getTickets(count, page, boardId, stageId, contactId, id, returnTotalCount, q, tags, assignee, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.getTickets']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -8512,9 +8770,11 @@ export const CRMApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getTicketsByStage(count?: number, page?: string, boardId?: string, stageId?: string, contactId?: UniqueContactID, returnTotalCount?: boolean, q?: string, tags?: ChatsGetTagsParameter, assignee?: ChatsGetAssigneeParameter, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GetTicketsByStage200Response>> {
+        async getTicketsByStage(count?: number, page?: string, boardId?: string, stageId?: string, contactId?: UniqueContactID, returnTotalCount?: boolean, q?: string, tags?: ChatsGetTagsParameter, assignee?: ChatsGetAssigneeParameter, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GetTicketsByStage200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getTicketsByStage(count, page, boardId, stageId, contactId, returnTotalCount, q, tags, assignee, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.getTicketsByStage']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -8524,9 +8784,11 @@ export const CRMApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async startTicketTimer(id: string, ticketTimerCreate?: TicketTimerCreate, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmTicket>> {
+        async startTicketTimer(id: string, ticketTimerCreate?: TicketTimerCreate, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmTicket>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.startTicketTimer(id, ticketTimerCreate, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.startTicketTimer']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * If no timer is running, this will return the ticket as is.
@@ -8535,9 +8797,11 @@ export const CRMApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async stopTicketTimer(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmTicket>> {
+        async stopTicketTimer(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmTicket>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.stopTicketTimer(id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.stopTicketTimer']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -8547,9 +8811,11 @@ export const CRMApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async updateTicket(id: string, crmTicketPatch?: CrmTicketPatch, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmTicket>> {
+        async updateTicket(id: string, crmTicketPatch?: CrmTicketPatch, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmTicket>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.updateTicket(id, crmTicketPatch, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.updateTicket']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -8564,11 +8830,31 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
         /**
          * 
          * @summary Create a new CRM ticket
+         * @param {CRMApiBulkCreateTicketsRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        bulkCreateTickets(requestParameters: CRMApiBulkCreateTicketsRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<Array<CrmTicket>> {
+            return localVarFp.bulkCreateTickets(requestParameters.crmTicketBulkPost, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Delete multiple CRM tickets
+         * @param {CRMApiBulkDeleteTicketsRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        bulkDeleteTickets(requestParameters: CRMApiBulkDeleteTicketsRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
+            return localVarFp.bulkDeleteTickets(requestParameters.ids, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Create a new CRM ticket
          * @param {CRMApiCreateTicketRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        createTicket(requestParameters: CRMApiCreateTicketRequest = {}, options?: AxiosRequestConfig): AxiosPromise<CrmTicket> {
+        createTicket(requestParameters: CRMApiCreateTicketRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<CrmTicket> {
             return localVarFp.createTicket(requestParameters.crmTicketPost, options).then((request) => request(axios, basePath));
         },
         /**
@@ -8578,16 +8864,16 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        crmBoardDelete(requestParameters: CRMApiCrmBoardDeleteRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        crmBoardDelete(requestParameters: CRMApiCrmBoardDeleteRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.crmBoardDelete(requestParameters.id, options).then((request) => request(axios, basePath));
         },
         /**
          * 
-         * @summary Get CRM Board data
+         * @summary Get All CRM Boards for the Team
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        crmBoardGet(options?: AxiosRequestConfig): AxiosPromise<CrmBoardGet200Response> {
+        crmBoardGet(options?: RawAxiosRequestConfig): AxiosPromise<CrmBoardGet200Response> {
             return localVarFp.crmBoardGet(options).then((request) => request(axios, basePath));
         },
         /**
@@ -8597,7 +8883,7 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        crmBoardPatch(requestParameters: CRMApiCrmBoardPatchRequest, options?: AxiosRequestConfig): AxiosPromise<CrmBoard> {
+        crmBoardPatch(requestParameters: CRMApiCrmBoardPatchRequest, options?: RawAxiosRequestConfig): AxiosPromise<CrmBoard> {
             return localVarFp.crmBoardPatch(requestParameters.id, requestParameters.crmBoardPatch, options).then((request) => request(axios, basePath));
         },
         /**
@@ -8607,7 +8893,7 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        crmBoardPost(requestParameters: CRMApiCrmBoardPostRequest = {}, options?: AxiosRequestConfig): AxiosPromise<CrmBoard> {
+        crmBoardPost(requestParameters: CRMApiCrmBoardPostRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<CrmBoard> {
             return localVarFp.crmBoardPost(requestParameters.crmBoardPost, options).then((request) => request(axios, basePath));
         },
         /**
@@ -8617,7 +8903,7 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deleteTicket(requestParameters: CRMApiDeleteTicketRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        deleteTicket(requestParameters: CRMApiDeleteTicketRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.deleteTicket(requestParameters.id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -8627,7 +8913,7 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getTickets(requestParameters: CRMApiGetTicketsRequest = {}, options?: AxiosRequestConfig): AxiosPromise<CrmTicketsPage> {
+        getTickets(requestParameters: CRMApiGetTicketsRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<CrmTicketsPage> {
             return localVarFp.getTickets(requestParameters.count, requestParameters.page, requestParameters.boardId, requestParameters.stageId, requestParameters.contactId, requestParameters.id, requestParameters.returnTotalCount, requestParameters.q, requestParameters.tags, requestParameters.assignee, options).then((request) => request(axios, basePath));
         },
         /**
@@ -8637,7 +8923,7 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getTicketsByStage(requestParameters: CRMApiGetTicketsByStageRequest = {}, options?: AxiosRequestConfig): AxiosPromise<GetTicketsByStage200Response> {
+        getTicketsByStage(requestParameters: CRMApiGetTicketsByStageRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<GetTicketsByStage200Response> {
             return localVarFp.getTicketsByStage(requestParameters.count, requestParameters.page, requestParameters.boardId, requestParameters.stageId, requestParameters.contactId, requestParameters.returnTotalCount, requestParameters.q, requestParameters.tags, requestParameters.assignee, options).then((request) => request(axios, basePath));
         },
         /**
@@ -8647,7 +8933,7 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        startTicketTimer(requestParameters: CRMApiStartTicketTimerRequest, options?: AxiosRequestConfig): AxiosPromise<CrmTicket> {
+        startTicketTimer(requestParameters: CRMApiStartTicketTimerRequest, options?: RawAxiosRequestConfig): AxiosPromise<CrmTicket> {
             return localVarFp.startTicketTimer(requestParameters.id, requestParameters.ticketTimerCreate, options).then((request) => request(axios, basePath));
         },
         /**
@@ -8657,7 +8943,7 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        stopTicketTimer(requestParameters: CRMApiStopTicketTimerRequest, options?: AxiosRequestConfig): AxiosPromise<CrmTicket> {
+        stopTicketTimer(requestParameters: CRMApiStopTicketTimerRequest, options?: RawAxiosRequestConfig): AxiosPromise<CrmTicket> {
             return localVarFp.stopTicketTimer(requestParameters.id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -8667,11 +8953,39 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        updateTicket(requestParameters: CRMApiUpdateTicketRequest, options?: AxiosRequestConfig): AxiosPromise<CrmTicket> {
+        updateTicket(requestParameters: CRMApiUpdateTicketRequest, options?: RawAxiosRequestConfig): AxiosPromise<CrmTicket> {
             return localVarFp.updateTicket(requestParameters.id, requestParameters.crmTicketPatch, options).then((request) => request(axios, basePath));
         },
     };
 };
+
+/**
+ * Request parameters for bulkCreateTickets operation in CRMApi.
+ * @export
+ * @interface CRMApiBulkCreateTicketsRequest
+ */
+export interface CRMApiBulkCreateTicketsRequest {
+    /**
+     * 
+     * @type {CrmTicketBulkPost}
+     * @memberof CRMApiBulkCreateTickets
+     */
+    readonly crmTicketBulkPost?: CrmTicketBulkPost
+}
+
+/**
+ * Request parameters for bulkDeleteTickets operation in CRMApi.
+ * @export
+ * @interface CRMApiBulkDeleteTicketsRequest
+ */
+export interface CRMApiBulkDeleteTicketsRequest {
+    /**
+     * Ticket IDs to delete
+     * @type {Array<string>}
+     * @memberof CRMApiBulkDeleteTickets
+     */
+    readonly ids: Array<string>
+}
 
 /**
  * Request parameters for createTicket operation in CRMApi.
@@ -8963,12 +9277,36 @@ export class CRMApi extends BaseAPI {
     /**
      * 
      * @summary Create a new CRM ticket
+     * @param {CRMApiBulkCreateTicketsRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CRMApi
+     */
+    public bulkCreateTickets(requestParameters: CRMApiBulkCreateTicketsRequest = {}, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).bulkCreateTickets(requestParameters.crmTicketBulkPost, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Delete multiple CRM tickets
+     * @param {CRMApiBulkDeleteTicketsRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CRMApi
+     */
+    public bulkDeleteTickets(requestParameters: CRMApiBulkDeleteTicketsRequest, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).bulkDeleteTickets(requestParameters.ids, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Create a new CRM ticket
      * @param {CRMApiCreateTicketRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public createTicket(requestParameters: CRMApiCreateTicketRequest = {}, options?: AxiosRequestConfig) {
+    public createTicket(requestParameters: CRMApiCreateTicketRequest = {}, options?: RawAxiosRequestConfig) {
         return CRMApiFp(this.configuration).createTicket(requestParameters.crmTicketPost, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -8980,18 +9318,18 @@ export class CRMApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public crmBoardDelete(requestParameters: CRMApiCrmBoardDeleteRequest, options?: AxiosRequestConfig) {
+    public crmBoardDelete(requestParameters: CRMApiCrmBoardDeleteRequest, options?: RawAxiosRequestConfig) {
         return CRMApiFp(this.configuration).crmBoardDelete(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * 
-     * @summary Get CRM Board data
+     * @summary Get All CRM Boards for the Team
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public crmBoardGet(options?: AxiosRequestConfig) {
+    public crmBoardGet(options?: RawAxiosRequestConfig) {
         return CRMApiFp(this.configuration).crmBoardGet(options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -9003,7 +9341,7 @@ export class CRMApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public crmBoardPatch(requestParameters: CRMApiCrmBoardPatchRequest, options?: AxiosRequestConfig) {
+    public crmBoardPatch(requestParameters: CRMApiCrmBoardPatchRequest, options?: RawAxiosRequestConfig) {
         return CRMApiFp(this.configuration).crmBoardPatch(requestParameters.id, requestParameters.crmBoardPatch, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -9015,7 +9353,7 @@ export class CRMApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public crmBoardPost(requestParameters: CRMApiCrmBoardPostRequest = {}, options?: AxiosRequestConfig) {
+    public crmBoardPost(requestParameters: CRMApiCrmBoardPostRequest = {}, options?: RawAxiosRequestConfig) {
         return CRMApiFp(this.configuration).crmBoardPost(requestParameters.crmBoardPost, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -9027,7 +9365,7 @@ export class CRMApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public deleteTicket(requestParameters: CRMApiDeleteTicketRequest, options?: AxiosRequestConfig) {
+    public deleteTicket(requestParameters: CRMApiDeleteTicketRequest, options?: RawAxiosRequestConfig) {
         return CRMApiFp(this.configuration).deleteTicket(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -9039,7 +9377,7 @@ export class CRMApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public getTickets(requestParameters: CRMApiGetTicketsRequest = {}, options?: AxiosRequestConfig) {
+    public getTickets(requestParameters: CRMApiGetTicketsRequest = {}, options?: RawAxiosRequestConfig) {
         return CRMApiFp(this.configuration).getTickets(requestParameters.count, requestParameters.page, requestParameters.boardId, requestParameters.stageId, requestParameters.contactId, requestParameters.id, requestParameters.returnTotalCount, requestParameters.q, requestParameters.tags, requestParameters.assignee, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -9051,7 +9389,7 @@ export class CRMApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public getTicketsByStage(requestParameters: CRMApiGetTicketsByStageRequest = {}, options?: AxiosRequestConfig) {
+    public getTicketsByStage(requestParameters: CRMApiGetTicketsByStageRequest = {}, options?: RawAxiosRequestConfig) {
         return CRMApiFp(this.configuration).getTicketsByStage(requestParameters.count, requestParameters.page, requestParameters.boardId, requestParameters.stageId, requestParameters.contactId, requestParameters.returnTotalCount, requestParameters.q, requestParameters.tags, requestParameters.assignee, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -9063,7 +9401,7 @@ export class CRMApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public startTicketTimer(requestParameters: CRMApiStartTicketTimerRequest, options?: AxiosRequestConfig) {
+    public startTicketTimer(requestParameters: CRMApiStartTicketTimerRequest, options?: RawAxiosRequestConfig) {
         return CRMApiFp(this.configuration).startTicketTimer(requestParameters.id, requestParameters.ticketTimerCreate, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -9075,7 +9413,7 @@ export class CRMApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public stopTicketTimer(requestParameters: CRMApiStopTicketTimerRequest, options?: AxiosRequestConfig) {
+    public stopTicketTimer(requestParameters: CRMApiStopTicketTimerRequest, options?: RawAxiosRequestConfig) {
         return CRMApiFp(this.configuration).stopTicketTimer(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -9087,232 +9425,11 @@ export class CRMApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public updateTicket(requestParameters: CRMApiUpdateTicketRequest, options?: AxiosRequestConfig) {
+    public updateTicket(requestParameters: CRMApiUpdateTicketRequest, options?: RawAxiosRequestConfig) {
         return CRMApiFp(this.configuration).updateTicket(requestParameters.id, requestParameters.crmTicketPatch, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
-
-/**
- * ChatHistoryApi - axios parameter creator
- * @export
- */
-export const ChatHistoryApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * 
-         * @summary Fetch chat history as a file
-         * @param {string} [timeZone] 
-         * @param {Array<string>} [chatId] 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        getChatHistory: async (timeZone?: string, chatId?: Array<string>, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/chat-history`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            // authentication chatdaddy required
-            // oauth required
-            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", ["CHATS_ACCESS_ALL"], configuration)
-
-            if (timeZone !== undefined) {
-                localVarQueryParameter['timeZone'] = timeZone;
-            }
-
-            if (chatId) {
-                localVarQueryParameter['chatId'] = chatId;
-            }
-
-
-    
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * 
-         * @summary Poll route to see if file is done
-         * @param {string} requestId 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        pollChatHistory: async (requestId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'requestId' is not null or undefined
-            assertParamExists('pollChatHistory', 'requestId', requestId)
-            const localVarPath = `/chat-history/{requestId}`
-                .replace(`{${"requestId"}}`, encodeURIComponent(String(requestId)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            // authentication chatdaddy required
-            // oauth required
-            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", ["CHATS_ACCESS_ALL"], configuration)
-
-
-    
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
-
-/**
- * ChatHistoryApi - functional programming interface
- * @export
- */
-export const ChatHistoryApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = ChatHistoryApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * 
-         * @summary Fetch chat history as a file
-         * @param {string} [timeZone] 
-         * @param {Array<string>} [chatId] 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async getChatHistory(timeZone?: string, chatId?: Array<string>, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GetChatHistory200Response>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getChatHistory(timeZone, chatId, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
-        },
-        /**
-         * 
-         * @summary Poll route to see if file is done
-         * @param {string} requestId 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async pollChatHistory(requestId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PollChatHistory200Response>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.pollChatHistory(requestId, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
-        },
-    }
-};
-
-/**
- * ChatHistoryApi - factory interface
- * @export
- */
-export const ChatHistoryApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = ChatHistoryApiFp(configuration)
-    return {
-        /**
-         * 
-         * @summary Fetch chat history as a file
-         * @param {ChatHistoryApiGetChatHistoryRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        getChatHistory(requestParameters: ChatHistoryApiGetChatHistoryRequest = {}, options?: AxiosRequestConfig): AxiosPromise<GetChatHistory200Response> {
-            return localVarFp.getChatHistory(requestParameters.timeZone, requestParameters.chatId, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * 
-         * @summary Poll route to see if file is done
-         * @param {ChatHistoryApiPollChatHistoryRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        pollChatHistory(requestParameters: ChatHistoryApiPollChatHistoryRequest, options?: AxiosRequestConfig): AxiosPromise<PollChatHistory200Response> {
-            return localVarFp.pollChatHistory(requestParameters.requestId, options).then((request) => request(axios, basePath));
-        },
-    };
-};
-
-/**
- * Request parameters for getChatHistory operation in ChatHistoryApi.
- * @export
- * @interface ChatHistoryApiGetChatHistoryRequest
- */
-export interface ChatHistoryApiGetChatHistoryRequest {
-    /**
-     * 
-     * @type {string}
-     * @memberof ChatHistoryApiGetChatHistory
-     */
-    readonly timeZone?: string
-
-    /**
-     * 
-     * @type {Array<string>}
-     * @memberof ChatHistoryApiGetChatHistory
-     */
-    readonly chatId?: Array<string>
-}
-
-/**
- * Request parameters for pollChatHistory operation in ChatHistoryApi.
- * @export
- * @interface ChatHistoryApiPollChatHistoryRequest
- */
-export interface ChatHistoryApiPollChatHistoryRequest {
-    /**
-     * 
-     * @type {string}
-     * @memberof ChatHistoryApiPollChatHistory
-     */
-    readonly requestId: string
-}
-
-/**
- * ChatHistoryApi - object-oriented interface
- * @export
- * @class ChatHistoryApi
- * @extends {BaseAPI}
- */
-export class ChatHistoryApi extends BaseAPI {
-    /**
-     * 
-     * @summary Fetch chat history as a file
-     * @param {ChatHistoryApiGetChatHistoryRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ChatHistoryApi
-     */
-    public getChatHistory(requestParameters: ChatHistoryApiGetChatHistoryRequest = {}, options?: AxiosRequestConfig) {
-        return ChatHistoryApiFp(this.configuration).getChatHistory(requestParameters.timeZone, requestParameters.chatId, options).then((request) => request(this.axios, this.basePath));
-    }
-
-    /**
-     * 
-     * @summary Poll route to see if file is done
-     * @param {ChatHistoryApiPollChatHistoryRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ChatHistoryApi
-     */
-    public pollChatHistory(requestParameters: ChatHistoryApiPollChatHistoryRequest, options?: AxiosRequestConfig) {
-        return ChatHistoryApiFp(this.configuration).pollChatHistory(requestParameters.requestId, options).then((request) => request(this.axios, this.basePath));
-    }
-}
 
 
 /**
@@ -9342,11 +9459,12 @@ export const ChatsApiAxiosParamCreator = function (configuration?: Configuration
          * @param {Array<string>} [accountId] Get contacts only belonging to this account
          * @param {ContactType} [type] only get contacts of type
          * @param {ChatsGetTicketParameter} [ticket] Query the status of a ticket
+         * @param {Array<string>} [notAssignee] Exclude contacts assigned to the specified users
          * @param {boolean} [returnUnreadChatCount] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        chatsGet: async (count?: number, page?: string, archive?: boolean, unread?: boolean, returnTotalCount?: boolean, hasPendingMessage?: boolean, mentioned?: string, hasUnsolvedNote?: boolean, hasFailedMessage?: boolean, lastMessageFromMe?: boolean, tags?: ChatsGetTagsParameter, notTags?: Array<string>, contacts?: ChatsGetContactsParameter, q?: string, assignee?: ChatsGetAssigneeParameter, accountId?: Array<string>, type?: ContactType, ticket?: ChatsGetTicketParameter, returnUnreadChatCount?: boolean, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        chatsGet: async (count?: number, page?: string, archive?: boolean, unread?: boolean, returnTotalCount?: boolean, hasPendingMessage?: boolean, mentioned?: string, hasUnsolvedNote?: boolean, hasFailedMessage?: boolean, lastMessageFromMe?: boolean, tags?: ChatsGetTagsParameter, notTags?: Array<string>, contacts?: ChatsGetContactsParameter, q?: string, assignee?: ChatsGetAssigneeParameter, accountId?: Array<string>, type?: ContactType, ticket?: ChatsGetTicketParameter, notAssignee?: Array<string>, returnUnreadChatCount?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/chats`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -9435,6 +9553,10 @@ export const ChatsApiAxiosParamCreator = function (configuration?: Configuration
                 localVarQueryParameter['ticket'] = ticket;
             }
 
+            if (notAssignee) {
+                localVarQueryParameter['notAssignee'] = notAssignee;
+            }
+
             if (returnUnreadChatCount !== undefined) {
                 localVarQueryParameter['returnUnreadChatCount'] = returnUnreadChatCount;
             }
@@ -9459,7 +9581,7 @@ export const ChatsApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        chatsPatch: async (accountId: string, id: string, chatAction?: ChatAction, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        chatsPatch: async (accountId: string, id: string, chatAction?: ChatAction, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('chatsPatch', 'accountId', accountId)
             // verify required parameter 'id' is not null or undefined
@@ -9505,7 +9627,7 @@ export const ChatsApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        chatsPresencePost: async (accountId: string, id: string, presence: PresenceType, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        chatsPresencePost: async (accountId: string, id: string, presence: PresenceType, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('chatsPresencePost', 'accountId', accountId)
             // verify required parameter 'id' is not null or undefined
@@ -9576,13 +9698,16 @@ export const ChatsApiFp = function(configuration?: Configuration) {
          * @param {Array<string>} [accountId] Get contacts only belonging to this account
          * @param {ContactType} [type] only get contacts of type
          * @param {ChatsGetTicketParameter} [ticket] Query the status of a ticket
+         * @param {Array<string>} [notAssignee] Exclude contacts assigned to the specified users
          * @param {boolean} [returnUnreadChatCount] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async chatsGet(count?: number, page?: string, archive?: boolean, unread?: boolean, returnTotalCount?: boolean, hasPendingMessage?: boolean, mentioned?: string, hasUnsolvedNote?: boolean, hasFailedMessage?: boolean, lastMessageFromMe?: boolean, tags?: ChatsGetTagsParameter, notTags?: Array<string>, contacts?: ChatsGetContactsParameter, q?: string, assignee?: ChatsGetAssigneeParameter, accountId?: Array<string>, type?: ContactType, ticket?: ChatsGetTicketParameter, returnUnreadChatCount?: boolean, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ChatsGet200Response>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.chatsGet(count, page, archive, unread, returnTotalCount, hasPendingMessage, mentioned, hasUnsolvedNote, hasFailedMessage, lastMessageFromMe, tags, notTags, contacts, q, assignee, accountId, type, ticket, returnUnreadChatCount, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        async chatsGet(count?: number, page?: string, archive?: boolean, unread?: boolean, returnTotalCount?: boolean, hasPendingMessage?: boolean, mentioned?: string, hasUnsolvedNote?: boolean, hasFailedMessage?: boolean, lastMessageFromMe?: boolean, tags?: ChatsGetTagsParameter, notTags?: Array<string>, contacts?: ChatsGetContactsParameter, q?: string, assignee?: ChatsGetAssigneeParameter, accountId?: Array<string>, type?: ContactType, ticket?: ChatsGetTicketParameter, notAssignee?: Array<string>, returnUnreadChatCount?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ChatsGet200Response>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.chatsGet(count, page, archive, unread, returnTotalCount, hasPendingMessage, mentioned, hasUnsolvedNote, hasFailedMessage, lastMessageFromMe, tags, notTags, contacts, q, assignee, accountId, type, ticket, notAssignee, returnUnreadChatCount, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ChatsApi.chatsGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -9593,9 +9718,11 @@ export const ChatsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async chatsPatch(accountId: string, id: string, chatAction?: ChatAction, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Chat>> {
+        async chatsPatch(accountId: string, id: string, chatAction?: ChatAction, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Chat>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.chatsPatch(accountId, id, chatAction, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ChatsApi.chatsPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * Note: Sending an \"available\" presence, will also subscribe you to events from the other party
@@ -9606,9 +9733,11 @@ export const ChatsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async chatsPresencePost(accountId: string, id: string, presence: PresenceType, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async chatsPresencePost(accountId: string, id: string, presence: PresenceType, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.chatsPresencePost(accountId, id, presence, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ChatsApi.chatsPresencePost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -9627,8 +9756,8 @@ export const ChatsApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        chatsGet(requestParameters: ChatsApiChatsGetRequest = {}, options?: AxiosRequestConfig): AxiosPromise<ChatsGet200Response> {
-            return localVarFp.chatsGet(requestParameters.count, requestParameters.page, requestParameters.archive, requestParameters.unread, requestParameters.returnTotalCount, requestParameters.hasPendingMessage, requestParameters.mentioned, requestParameters.hasUnsolvedNote, requestParameters.hasFailedMessage, requestParameters.lastMessageFromMe, requestParameters.tags, requestParameters.notTags, requestParameters.contacts, requestParameters.q, requestParameters.assignee, requestParameters.accountId, requestParameters.type, requestParameters.ticket, requestParameters.returnUnreadChatCount, options).then((request) => request(axios, basePath));
+        chatsGet(requestParameters: ChatsApiChatsGetRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<ChatsGet200Response> {
+            return localVarFp.chatsGet(requestParameters.count, requestParameters.page, requestParameters.archive, requestParameters.unread, requestParameters.returnTotalCount, requestParameters.hasPendingMessage, requestParameters.mentioned, requestParameters.hasUnsolvedNote, requestParameters.hasFailedMessage, requestParameters.lastMessageFromMe, requestParameters.tags, requestParameters.notTags, requestParameters.contacts, requestParameters.q, requestParameters.assignee, requestParameters.accountId, requestParameters.type, requestParameters.ticket, requestParameters.notAssignee, requestParameters.returnUnreadChatCount, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -9637,7 +9766,7 @@ export const ChatsApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        chatsPatch(requestParameters: ChatsApiChatsPatchRequest, options?: AxiosRequestConfig): AxiosPromise<Chat> {
+        chatsPatch(requestParameters: ChatsApiChatsPatchRequest, options?: RawAxiosRequestConfig): AxiosPromise<Chat> {
             return localVarFp.chatsPatch(requestParameters.accountId, requestParameters.id, requestParameters.chatAction, options).then((request) => request(axios, basePath));
         },
         /**
@@ -9647,7 +9776,7 @@ export const ChatsApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        chatsPresencePost(requestParameters: ChatsApiChatsPresencePostRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        chatsPresencePost(requestParameters: ChatsApiChatsPresencePostRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.chatsPresencePost(requestParameters.accountId, requestParameters.id, requestParameters.presence, options).then((request) => request(axios, basePath));
         },
     };
@@ -9786,6 +9915,13 @@ export interface ChatsApiChatsGetRequest {
     readonly ticket?: ChatsGetTicketParameter
 
     /**
+     * Exclude contacts assigned to the specified users
+     * @type {Array<string>}
+     * @memberof ChatsApiChatsGet
+     */
+    readonly notAssignee?: Array<string>
+
+    /**
      * 
      * @type {boolean}
      * @memberof ChatsApiChatsGet
@@ -9864,8 +10000,8 @@ export class ChatsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ChatsApi
      */
-    public chatsGet(requestParameters: ChatsApiChatsGetRequest = {}, options?: AxiosRequestConfig) {
-        return ChatsApiFp(this.configuration).chatsGet(requestParameters.count, requestParameters.page, requestParameters.archive, requestParameters.unread, requestParameters.returnTotalCount, requestParameters.hasPendingMessage, requestParameters.mentioned, requestParameters.hasUnsolvedNote, requestParameters.hasFailedMessage, requestParameters.lastMessageFromMe, requestParameters.tags, requestParameters.notTags, requestParameters.contacts, requestParameters.q, requestParameters.assignee, requestParameters.accountId, requestParameters.type, requestParameters.ticket, requestParameters.returnUnreadChatCount, options).then((request) => request(this.axios, this.basePath));
+    public chatsGet(requestParameters: ChatsApiChatsGetRequest = {}, options?: RawAxiosRequestConfig) {
+        return ChatsApiFp(this.configuration).chatsGet(requestParameters.count, requestParameters.page, requestParameters.archive, requestParameters.unread, requestParameters.returnTotalCount, requestParameters.hasPendingMessage, requestParameters.mentioned, requestParameters.hasUnsolvedNote, requestParameters.hasFailedMessage, requestParameters.lastMessageFromMe, requestParameters.tags, requestParameters.notTags, requestParameters.contacts, requestParameters.q, requestParameters.assignee, requestParameters.accountId, requestParameters.type, requestParameters.ticket, requestParameters.notAssignee, requestParameters.returnUnreadChatCount, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -9876,7 +10012,7 @@ export class ChatsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ChatsApi
      */
-    public chatsPatch(requestParameters: ChatsApiChatsPatchRequest, options?: AxiosRequestConfig) {
+    public chatsPatch(requestParameters: ChatsApiChatsPatchRequest, options?: RawAxiosRequestConfig) {
         return ChatsApiFp(this.configuration).chatsPatch(requestParameters.accountId, requestParameters.id, requestParameters.chatAction, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -9888,10 +10024,11 @@ export class ChatsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ChatsApi
      */
-    public chatsPresencePost(requestParameters: ChatsApiChatsPresencePostRequest, options?: AxiosRequestConfig) {
+    public chatsPresencePost(requestParameters: ChatsApiChatsPresencePostRequest, options?: RawAxiosRequestConfig) {
         return ChatsApiFp(this.configuration).chatsPresencePost(requestParameters.accountId, requestParameters.id, requestParameters.presence, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -9903,13 +10040,13 @@ export const ContactsApiAxiosParamCreator = function (configuration?: Configurat
         /**
          * Eg. provide a phone number to check whether the user is registered on WhatsApp
          * @summary Check a given user exists on the IM platform
-         * @param {'whatsapp' | 'tiktok'} type which account type to check from
+         * @param {ContactsCheckExistsTypeEnum} type which account type to check from
          * @param {string} [phoneNumber] Phone number to check
          * @param {string} [username] Username to check
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        contactsCheckExists: async (type: 'whatsapp' | 'tiktok', phoneNumber?: string, username?: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        contactsCheckExists: async (type: ContactsCheckExistsTypeEnum, phoneNumber?: string, username?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'type' is not null or undefined
             assertParamExists('contactsCheckExists', 'type', type)
             const localVarPath = `/contacts/exists`;
@@ -9975,7 +10112,7 @@ export const ContactsApiAxiosParamCreator = function (configuration?: Configurat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        contactsDelete: async (tags?: ChatsGetTagsParameter, notTags?: Array<string>, contacts?: ChatsGetContactsParameter, notContacts?: ChatsGetContactsParameter, minMessagesSent?: number, minMessagesRecv?: number, maxMessagesSent?: number, maxMessagesRecv?: number, q?: string, assignee?: ChatsGetAssigneeParameter, notAssignee?: Array<string>, accountId?: Array<string>, type?: ContactType, chatLastMessageFrom?: string, chatLastMessageTo?: string, lastMessageFromMe?: boolean, unread?: boolean, ticket?: ChatsGetTicketParameter, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        contactsDelete: async (tags?: ChatsGetTagsParameter, notTags?: Array<string>, contacts?: ChatsGetContactsParameter, notContacts?: ChatsGetContactsParameter, minMessagesSent?: number, minMessagesRecv?: number, maxMessagesSent?: number, maxMessagesRecv?: number, q?: string, assignee?: ChatsGetAssigneeParameter, notAssignee?: Array<string>, accountId?: Array<string>, type?: ContactType, chatLastMessageFrom?: string, chatLastMessageTo?: string, lastMessageFromMe?: boolean, unread?: boolean, ticket?: ChatsGetTicketParameter, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/contacts`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -10108,7 +10245,7 @@ export const ContactsApiAxiosParamCreator = function (configuration?: Configurat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        contactsGet: async (tags?: ChatsGetTagsParameter, notTags?: Array<string>, contacts?: ChatsGetContactsParameter, notContacts?: ChatsGetContactsParameter, minMessagesSent?: number, minMessagesRecv?: number, maxMessagesSent?: number, maxMessagesRecv?: number, q?: string, assignee?: ChatsGetAssigneeParameter, notAssignee?: Array<string>, accountId?: Array<string>, type?: ContactType, chatLastMessageFrom?: string, chatLastMessageTo?: string, lastMessageFromMe?: boolean, unread?: boolean, ticket?: ChatsGetTicketParameter, orderByTicketOrder?: boolean, returnTotalCount?: boolean, returnLastMessage?: boolean, page?: string, count?: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        contactsGet: async (tags?: ChatsGetTagsParameter, notTags?: Array<string>, contacts?: ChatsGetContactsParameter, notContacts?: ChatsGetContactsParameter, minMessagesSent?: number, minMessagesRecv?: number, maxMessagesSent?: number, maxMessagesRecv?: number, q?: string, assignee?: ChatsGetAssigneeParameter, notAssignee?: Array<string>, accountId?: Array<string>, type?: ContactType, chatLastMessageFrom?: string, chatLastMessageTo?: string, lastMessageFromMe?: boolean, unread?: boolean, ticket?: ChatsGetTicketParameter, orderByTicketOrder?: boolean, returnTotalCount?: boolean, returnLastMessage?: boolean, page?: string, count?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/contacts`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -10237,11 +10374,11 @@ export const ContactsApiAxiosParamCreator = function (configuration?: Configurat
          * @summary Get the display image of a contact
          * @param {string} id 
          * @param {string} accountId 
-         * @param {'preview' | 'full'} [type] Whether to fetch preview sized image or the full image
+         * @param {ContactsImageGetTypeEnum} [type] Whether to fetch preview sized image or the full image
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        contactsImageGet: async (id: string, accountId: string, type?: 'preview' | 'full', options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        contactsImageGet: async (id: string, accountId: string, type?: ContactsImageGetTypeEnum, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('contactsImageGet', 'id', id)
             // verify required parameter 'accountId' is not null or undefined
@@ -10304,7 +10441,7 @@ export const ContactsApiAxiosParamCreator = function (configuration?: Configurat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        contactsPatch: async (tags?: ChatsGetTagsParameter, notTags?: Array<string>, contacts?: ChatsGetContactsParameter, notContacts?: ChatsGetContactsParameter, minMessagesSent?: number, minMessagesRecv?: number, maxMessagesSent?: number, maxMessagesRecv?: number, q?: string, assignee?: ChatsGetAssigneeParameter, notAssignee?: Array<string>, accountId?: Array<string>, type?: ContactType, chatLastMessageFrom?: string, chatLastMessageTo?: string, lastMessageFromMe?: boolean, unread?: boolean, ticket?: ChatsGetTicketParameter, contactsPatch?: ContactsPatch, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        contactsPatch: async (tags?: ChatsGetTagsParameter, notTags?: Array<string>, contacts?: ChatsGetContactsParameter, notContacts?: ChatsGetContactsParameter, minMessagesSent?: number, minMessagesRecv?: number, maxMessagesSent?: number, maxMessagesRecv?: number, q?: string, assignee?: ChatsGetAssigneeParameter, notAssignee?: Array<string>, accountId?: Array<string>, type?: ContactType, chatLastMessageFrom?: string, chatLastMessageTo?: string, lastMessageFromMe?: boolean, unread?: boolean, ticket?: ChatsGetTicketParameter, contactsPatch?: ContactsPatch, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/contacts`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -10418,7 +10555,7 @@ export const ContactsApiAxiosParamCreator = function (configuration?: Configurat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        contactsPost: async (contactsPost?: ContactsPost, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        contactsPost: async (contactsPost?: ContactsPost, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/contacts/upsert`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -10462,15 +10599,17 @@ export const ContactsApiFp = function(configuration?: Configuration) {
         /**
          * Eg. provide a phone number to check whether the user is registered on WhatsApp
          * @summary Check a given user exists on the IM platform
-         * @param {'whatsapp' | 'tiktok'} type which account type to check from
+         * @param {ContactsCheckExistsTypeEnum} type which account type to check from
          * @param {string} [phoneNumber] Phone number to check
          * @param {string} [username] Username to check
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async contactsCheckExists(type: 'whatsapp' | 'tiktok', phoneNumber?: string, username?: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ContactsCheckExists200Response>> {
+        async contactsCheckExists(type: ContactsCheckExistsTypeEnum, phoneNumber?: string, username?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ContactsCheckExists200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.contactsCheckExists(type, phoneNumber, username, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ContactsApi.contactsCheckExists']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -10496,9 +10635,11 @@ export const ContactsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async contactsDelete(tags?: ChatsGetTagsParameter, notTags?: Array<string>, contacts?: ChatsGetContactsParameter, notContacts?: ChatsGetContactsParameter, minMessagesSent?: number, minMessagesRecv?: number, maxMessagesSent?: number, maxMessagesRecv?: number, q?: string, assignee?: ChatsGetAssigneeParameter, notAssignee?: Array<string>, accountId?: Array<string>, type?: ContactType, chatLastMessageFrom?: string, chatLastMessageTo?: string, lastMessageFromMe?: boolean, unread?: boolean, ticket?: ChatsGetTicketParameter, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async contactsDelete(tags?: ChatsGetTagsParameter, notTags?: Array<string>, contacts?: ChatsGetContactsParameter, notContacts?: ChatsGetContactsParameter, minMessagesSent?: number, minMessagesRecv?: number, maxMessagesSent?: number, maxMessagesRecv?: number, q?: string, assignee?: ChatsGetAssigneeParameter, notAssignee?: Array<string>, accountId?: Array<string>, type?: ContactType, chatLastMessageFrom?: string, chatLastMessageTo?: string, lastMessageFromMe?: boolean, unread?: boolean, ticket?: ChatsGetTicketParameter, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.contactsDelete(tags, notTags, contacts, notContacts, minMessagesSent, minMessagesRecv, maxMessagesSent, maxMessagesRecv, q, assignee, notAssignee, accountId, type, chatLastMessageFrom, chatLastMessageTo, lastMessageFromMe, unread, ticket, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ContactsApi.contactsDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -10529,22 +10670,26 @@ export const ContactsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async contactsGet(tags?: ChatsGetTagsParameter, notTags?: Array<string>, contacts?: ChatsGetContactsParameter, notContacts?: ChatsGetContactsParameter, minMessagesSent?: number, minMessagesRecv?: number, maxMessagesSent?: number, maxMessagesRecv?: number, q?: string, assignee?: ChatsGetAssigneeParameter, notAssignee?: Array<string>, accountId?: Array<string>, type?: ContactType, chatLastMessageFrom?: string, chatLastMessageTo?: string, lastMessageFromMe?: boolean, unread?: boolean, ticket?: ChatsGetTicketParameter, orderByTicketOrder?: boolean, returnTotalCount?: boolean, returnLastMessage?: boolean, page?: string, count?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ContactsGet200Response>> {
+        async contactsGet(tags?: ChatsGetTagsParameter, notTags?: Array<string>, contacts?: ChatsGetContactsParameter, notContacts?: ChatsGetContactsParameter, minMessagesSent?: number, minMessagesRecv?: number, maxMessagesSent?: number, maxMessagesRecv?: number, q?: string, assignee?: ChatsGetAssigneeParameter, notAssignee?: Array<string>, accountId?: Array<string>, type?: ContactType, chatLastMessageFrom?: string, chatLastMessageTo?: string, lastMessageFromMe?: boolean, unread?: boolean, ticket?: ChatsGetTicketParameter, orderByTicketOrder?: boolean, returnTotalCount?: boolean, returnLastMessage?: boolean, page?: string, count?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ContactsGet200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.contactsGet(tags, notTags, contacts, notContacts, minMessagesSent, minMessagesRecv, maxMessagesSent, maxMessagesRecv, q, assignee, notAssignee, accountId, type, chatLastMessageFrom, chatLastMessageTo, lastMessageFromMe, unread, ticket, orderByTicketOrder, returnTotalCount, returnLastMessage, page, count, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ContactsApi.contactsGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
          * @summary Get the display image of a contact
          * @param {string} id 
          * @param {string} accountId 
-         * @param {'preview' | 'full'} [type] Whether to fetch preview sized image or the full image
+         * @param {ContactsImageGetTypeEnum} [type] Whether to fetch preview sized image or the full image
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async contactsImageGet(id: string, accountId: string, type?: 'preview' | 'full', options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ContactsImageGet200Response>> {
+        async contactsImageGet(id: string, accountId: string, type?: ContactsImageGetTypeEnum, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ContactsImageGet200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.contactsImageGet(id, accountId, type, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ContactsApi.contactsImageGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -10571,9 +10716,11 @@ export const ContactsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async contactsPatch(tags?: ChatsGetTagsParameter, notTags?: Array<string>, contacts?: ChatsGetContactsParameter, notContacts?: ChatsGetContactsParameter, minMessagesSent?: number, minMessagesRecv?: number, maxMessagesSent?: number, maxMessagesRecv?: number, q?: string, assignee?: ChatsGetAssigneeParameter, notAssignee?: Array<string>, accountId?: Array<string>, type?: ContactType, chatLastMessageFrom?: string, chatLastMessageTo?: string, lastMessageFromMe?: boolean, unread?: boolean, ticket?: ChatsGetTicketParameter, contactsPatch?: ContactsPatch, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ContactsPatch200Response>> {
+        async contactsPatch(tags?: ChatsGetTagsParameter, notTags?: Array<string>, contacts?: ChatsGetContactsParameter, notContacts?: ChatsGetContactsParameter, minMessagesSent?: number, minMessagesRecv?: number, maxMessagesSent?: number, maxMessagesRecv?: number, q?: string, assignee?: ChatsGetAssigneeParameter, notAssignee?: Array<string>, accountId?: Array<string>, type?: ContactType, chatLastMessageFrom?: string, chatLastMessageTo?: string, lastMessageFromMe?: boolean, unread?: boolean, ticket?: ChatsGetTicketParameter, contactsPatch?: ContactsPatch, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ContactsPatch200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.contactsPatch(tags, notTags, contacts, notContacts, minMessagesSent, minMessagesRecv, maxMessagesSent, maxMessagesRecv, q, assignee, notAssignee, accountId, type, chatLastMessageFrom, chatLastMessageTo, lastMessageFromMe, unread, ticket, contactsPatch, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ContactsApi.contactsPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -10582,9 +10729,11 @@ export const ContactsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async contactsPost(contactsPost?: ContactsPost, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async contactsPost(contactsPost?: ContactsPost, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.contactsPost(contactsPost, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ContactsApi.contactsPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -10603,7 +10752,7 @@ export const ContactsApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        contactsCheckExists(requestParameters: ContactsApiContactsCheckExistsRequest, options?: AxiosRequestConfig): AxiosPromise<ContactsCheckExists200Response> {
+        contactsCheckExists(requestParameters: ContactsApiContactsCheckExistsRequest, options?: RawAxiosRequestConfig): AxiosPromise<ContactsCheckExists200Response> {
             return localVarFp.contactsCheckExists(requestParameters.type, requestParameters.phoneNumber, requestParameters.username, options).then((request) => request(axios, basePath));
         },
         /**
@@ -10613,7 +10762,7 @@ export const ContactsApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        contactsDelete(requestParameters: ContactsApiContactsDeleteRequest = {}, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        contactsDelete(requestParameters: ContactsApiContactsDeleteRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.contactsDelete(requestParameters.tags, requestParameters.notTags, requestParameters.contacts, requestParameters.notContacts, requestParameters.minMessagesSent, requestParameters.minMessagesRecv, requestParameters.maxMessagesSent, requestParameters.maxMessagesRecv, requestParameters.q, requestParameters.assignee, requestParameters.notAssignee, requestParameters.accountId, requestParameters.type, requestParameters.chatLastMessageFrom, requestParameters.chatLastMessageTo, requestParameters.lastMessageFromMe, requestParameters.unread, requestParameters.ticket, options).then((request) => request(axios, basePath));
         },
         /**
@@ -10623,7 +10772,7 @@ export const ContactsApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        contactsGet(requestParameters: ContactsApiContactsGetRequest = {}, options?: AxiosRequestConfig): AxiosPromise<ContactsGet200Response> {
+        contactsGet(requestParameters: ContactsApiContactsGetRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<ContactsGet200Response> {
             return localVarFp.contactsGet(requestParameters.tags, requestParameters.notTags, requestParameters.contacts, requestParameters.notContacts, requestParameters.minMessagesSent, requestParameters.minMessagesRecv, requestParameters.maxMessagesSent, requestParameters.maxMessagesRecv, requestParameters.q, requestParameters.assignee, requestParameters.notAssignee, requestParameters.accountId, requestParameters.type, requestParameters.chatLastMessageFrom, requestParameters.chatLastMessageTo, requestParameters.lastMessageFromMe, requestParameters.unread, requestParameters.ticket, requestParameters.orderByTicketOrder, requestParameters.returnTotalCount, requestParameters.returnLastMessage, requestParameters.page, requestParameters.count, options).then((request) => request(axios, basePath));
         },
         /**
@@ -10633,7 +10782,7 @@ export const ContactsApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        contactsImageGet(requestParameters: ContactsApiContactsImageGetRequest, options?: AxiosRequestConfig): AxiosPromise<ContactsImageGet200Response> {
+        contactsImageGet(requestParameters: ContactsApiContactsImageGetRequest, options?: RawAxiosRequestConfig): AxiosPromise<ContactsImageGet200Response> {
             return localVarFp.contactsImageGet(requestParameters.id, requestParameters.accountId, requestParameters.type, options).then((request) => request(axios, basePath));
         },
         /**
@@ -10643,7 +10792,7 @@ export const ContactsApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        contactsPatch(requestParameters: ContactsApiContactsPatchRequest = {}, options?: AxiosRequestConfig): AxiosPromise<ContactsPatch200Response> {
+        contactsPatch(requestParameters: ContactsApiContactsPatchRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<ContactsPatch200Response> {
             return localVarFp.contactsPatch(requestParameters.tags, requestParameters.notTags, requestParameters.contacts, requestParameters.notContacts, requestParameters.minMessagesSent, requestParameters.minMessagesRecv, requestParameters.maxMessagesSent, requestParameters.maxMessagesRecv, requestParameters.q, requestParameters.assignee, requestParameters.notAssignee, requestParameters.accountId, requestParameters.type, requestParameters.chatLastMessageFrom, requestParameters.chatLastMessageTo, requestParameters.lastMessageFromMe, requestParameters.unread, requestParameters.ticket, requestParameters.contactsPatch, options).then((request) => request(axios, basePath));
         },
         /**
@@ -10653,7 +10802,7 @@ export const ContactsApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        contactsPost(requestParameters: ContactsApiContactsPostRequest = {}, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        contactsPost(requestParameters: ContactsApiContactsPostRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.contactsPost(requestParameters.contactsPost, options).then((request) => request(axios, basePath));
         },
     };
@@ -10670,7 +10819,7 @@ export interface ContactsApiContactsCheckExistsRequest {
      * @type {'whatsapp' | 'tiktok'}
      * @memberof ContactsApiContactsCheckExists
      */
-    readonly type: 'whatsapp' | 'tiktok'
+    readonly type: ContactsCheckExistsTypeEnum
 
     /**
      * Phone number to check
@@ -11013,7 +11162,7 @@ export interface ContactsApiContactsImageGetRequest {
      * @type {'preview' | 'full'}
      * @memberof ContactsApiContactsImageGet
      */
-    readonly type?: 'preview' | 'full'
+    readonly type?: ContactsImageGetTypeEnum
 }
 
 /**
@@ -11185,7 +11334,7 @@ export class ContactsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ContactsApi
      */
-    public contactsCheckExists(requestParameters: ContactsApiContactsCheckExistsRequest, options?: AxiosRequestConfig) {
+    public contactsCheckExists(requestParameters: ContactsApiContactsCheckExistsRequest, options?: RawAxiosRequestConfig) {
         return ContactsApiFp(this.configuration).contactsCheckExists(requestParameters.type, requestParameters.phoneNumber, requestParameters.username, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -11197,7 +11346,7 @@ export class ContactsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ContactsApi
      */
-    public contactsDelete(requestParameters: ContactsApiContactsDeleteRequest = {}, options?: AxiosRequestConfig) {
+    public contactsDelete(requestParameters: ContactsApiContactsDeleteRequest = {}, options?: RawAxiosRequestConfig) {
         return ContactsApiFp(this.configuration).contactsDelete(requestParameters.tags, requestParameters.notTags, requestParameters.contacts, requestParameters.notContacts, requestParameters.minMessagesSent, requestParameters.minMessagesRecv, requestParameters.maxMessagesSent, requestParameters.maxMessagesRecv, requestParameters.q, requestParameters.assignee, requestParameters.notAssignee, requestParameters.accountId, requestParameters.type, requestParameters.chatLastMessageFrom, requestParameters.chatLastMessageTo, requestParameters.lastMessageFromMe, requestParameters.unread, requestParameters.ticket, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -11209,7 +11358,7 @@ export class ContactsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ContactsApi
      */
-    public contactsGet(requestParameters: ContactsApiContactsGetRequest = {}, options?: AxiosRequestConfig) {
+    public contactsGet(requestParameters: ContactsApiContactsGetRequest = {}, options?: RawAxiosRequestConfig) {
         return ContactsApiFp(this.configuration).contactsGet(requestParameters.tags, requestParameters.notTags, requestParameters.contacts, requestParameters.notContacts, requestParameters.minMessagesSent, requestParameters.minMessagesRecv, requestParameters.maxMessagesSent, requestParameters.maxMessagesRecv, requestParameters.q, requestParameters.assignee, requestParameters.notAssignee, requestParameters.accountId, requestParameters.type, requestParameters.chatLastMessageFrom, requestParameters.chatLastMessageTo, requestParameters.lastMessageFromMe, requestParameters.unread, requestParameters.ticket, requestParameters.orderByTicketOrder, requestParameters.returnTotalCount, requestParameters.returnLastMessage, requestParameters.page, requestParameters.count, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -11221,7 +11370,7 @@ export class ContactsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ContactsApi
      */
-    public contactsImageGet(requestParameters: ContactsApiContactsImageGetRequest, options?: AxiosRequestConfig) {
+    public contactsImageGet(requestParameters: ContactsApiContactsImageGetRequest, options?: RawAxiosRequestConfig) {
         return ContactsApiFp(this.configuration).contactsImageGet(requestParameters.id, requestParameters.accountId, requestParameters.type, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -11233,7 +11382,7 @@ export class ContactsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ContactsApi
      */
-    public contactsPatch(requestParameters: ContactsApiContactsPatchRequest = {}, options?: AxiosRequestConfig) {
+    public contactsPatch(requestParameters: ContactsApiContactsPatchRequest = {}, options?: RawAxiosRequestConfig) {
         return ContactsApiFp(this.configuration).contactsPatch(requestParameters.tags, requestParameters.notTags, requestParameters.contacts, requestParameters.notContacts, requestParameters.minMessagesSent, requestParameters.minMessagesRecv, requestParameters.maxMessagesSent, requestParameters.maxMessagesRecv, requestParameters.q, requestParameters.assignee, requestParameters.notAssignee, requestParameters.accountId, requestParameters.type, requestParameters.chatLastMessageFrom, requestParameters.chatLastMessageTo, requestParameters.lastMessageFromMe, requestParameters.unread, requestParameters.ticket, requestParameters.contactsPatch, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -11245,10 +11394,27 @@ export class ContactsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ContactsApi
      */
-    public contactsPost(requestParameters: ContactsApiContactsPostRequest = {}, options?: AxiosRequestConfig) {
+    public contactsPost(requestParameters: ContactsApiContactsPostRequest = {}, options?: RawAxiosRequestConfig) {
         return ContactsApiFp(this.configuration).contactsPost(requestParameters.contactsPost, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
+/**
+ * @export
+ */
+export const ContactsCheckExistsTypeEnum = {
+    Whatsapp: 'whatsapp',
+    Tiktok: 'tiktok'
+} as const;
+export type ContactsCheckExistsTypeEnum = typeof ContactsCheckExistsTypeEnum[keyof typeof ContactsCheckExistsTypeEnum];
+/**
+ * @export
+ */
+export const ContactsImageGetTypeEnum = {
+    Preview: 'preview',
+    Full: 'full'
+} as const;
+export type ContactsImageGetTypeEnum = typeof ContactsImageGetTypeEnum[keyof typeof ContactsImageGetTypeEnum];
 
 
 /**
@@ -11265,7 +11431,7 @@ export const FilesApiAxiosParamCreator = function (configuration?: Configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        filesPost: async (mimetype: string, name: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        filesPost: async (mimetype: string, name: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'mimetype' is not null or undefined
             assertParamExists('filesPost', 'mimetype', mimetype)
             // verify required parameter 'name' is not null or undefined
@@ -11323,9 +11489,11 @@ export const FilesApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async filesPost(mimetype: string, name: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<{ [key: string]: any; }>> {
+        async filesPost(mimetype: string, name: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<{ [key: string]: any; }>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.filesPost(mimetype, name, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['FilesApi.filesPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -11344,7 +11512,7 @@ export const FilesApiFactory = function (configuration?: Configuration, basePath
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        filesPost(requestParameters: FilesApiFilesPostRequest, options?: AxiosRequestConfig): AxiosPromise<{ [key: string]: any; }> {
+        filesPost(requestParameters: FilesApiFilesPostRequest, options?: RawAxiosRequestConfig): AxiosPromise<{ [key: string]: any; }> {
             return localVarFp.filesPost(requestParameters.mimetype, requestParameters.name, options).then((request) => request(axios, basePath));
         },
     };
@@ -11386,10 +11554,11 @@ export class FilesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof FilesApi
      */
-    public filesPost(requestParameters: FilesApiFilesPostRequest, options?: AxiosRequestConfig) {
+    public filesPost(requestParameters: FilesApiFilesPostRequest, options?: RawAxiosRequestConfig) {
         return FilesApiFp(this.configuration).filesPost(requestParameters.mimetype, requestParameters.name, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -11407,7 +11576,7 @@ export const GroupsApiAxiosParamCreator = function (configuration?: Configuratio
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        groupsGet: async (accountId: string, id: string, forceRefresh?: boolean, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        groupsGet: async (accountId: string, id: string, forceRefresh?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('groupsGet', 'accountId', accountId)
             // verify required parameter 'id' is not null or undefined
@@ -11453,7 +11622,7 @@ export const GroupsApiAxiosParamCreator = function (configuration?: Configuratio
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        groupsInviteCode: async (accountId: string, id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        groupsInviteCode: async (accountId: string, id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('groupsInviteCode', 'accountId', accountId)
             // verify required parameter 'id' is not null or undefined
@@ -11496,7 +11665,7 @@ export const GroupsApiAxiosParamCreator = function (configuration?: Configuratio
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        groupsJoin: async (accountId: string, id: string, code: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        groupsJoin: async (accountId: string, id: string, code: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('groupsJoin', 'accountId', accountId)
             // verify required parameter 'id' is not null or undefined
@@ -11544,7 +11713,7 @@ export const GroupsApiAxiosParamCreator = function (configuration?: Configuratio
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        groupsLeave: async (accountId: string, id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        groupsLeave: async (accountId: string, id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('groupsLeave', 'accountId', accountId)
             // verify required parameter 'id' is not null or undefined
@@ -11587,7 +11756,7 @@ export const GroupsApiAxiosParamCreator = function (configuration?: Configuratio
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        groupsPatch: async (accountId: string, id: string, groupAction?: GroupAction, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        groupsPatch: async (accountId: string, id: string, groupAction?: GroupAction, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('groupsPatch', 'accountId', accountId)
             // verify required parameter 'id' is not null or undefined
@@ -11632,7 +11801,7 @@ export const GroupsApiAxiosParamCreator = function (configuration?: Configuratio
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        groupsPost: async (accountId: string, groupCreate?: GroupCreate, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        groupsPost: async (accountId: string, groupCreate?: GroupCreate, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('groupsPost', 'accountId', accountId)
             const localVarPath = `/groups/{accountId}`
@@ -11685,9 +11854,11 @@ export const GroupsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async groupsGet(accountId: string, id: string, forceRefresh?: boolean, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GroupMetadata>> {
+        async groupsGet(accountId: string, id: string, forceRefresh?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GroupMetadata>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.groupsGet(accountId, id, forceRefresh, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['GroupsApi.groupsGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -11697,9 +11868,11 @@ export const GroupsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async groupsInviteCode(accountId: string, id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GroupsInviteCode200Response>> {
+        async groupsInviteCode(accountId: string, id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GroupsInviteCode200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.groupsInviteCode(accountId, id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['GroupsApi.groupsInviteCode']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -11710,9 +11883,11 @@ export const GroupsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async groupsJoin(accountId: string, id: string, code: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GroupMetadata>> {
+        async groupsJoin(accountId: string, id: string, code: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GroupMetadata>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.groupsJoin(accountId, id, code, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['GroupsApi.groupsJoin']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -11722,9 +11897,11 @@ export const GroupsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async groupsLeave(accountId: string, id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<{ [key: string]: any; }>> {
+        async groupsLeave(accountId: string, id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<{ [key: string]: any; }>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.groupsLeave(accountId, id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['GroupsApi.groupsLeave']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -11735,9 +11912,11 @@ export const GroupsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async groupsPatch(accountId: string, id: string, groupAction?: GroupAction, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GroupMetadata>> {
+        async groupsPatch(accountId: string, id: string, groupAction?: GroupAction, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GroupMetadata>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.groupsPatch(accountId, id, groupAction, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['GroupsApi.groupsPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -11747,9 +11926,11 @@ export const GroupsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async groupsPost(accountId: string, groupCreate?: GroupCreate, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GroupMetadata>> {
+        async groupsPost(accountId: string, groupCreate?: GroupCreate, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GroupMetadata>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.groupsPost(accountId, groupCreate, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['GroupsApi.groupsPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -11768,7 +11949,7 @@ export const GroupsApiFactory = function (configuration?: Configuration, basePat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        groupsGet(requestParameters: GroupsApiGroupsGetRequest, options?: AxiosRequestConfig): AxiosPromise<GroupMetadata> {
+        groupsGet(requestParameters: GroupsApiGroupsGetRequest, options?: RawAxiosRequestConfig): AxiosPromise<GroupMetadata> {
             return localVarFp.groupsGet(requestParameters.accountId, requestParameters.id, requestParameters.forceRefresh, options).then((request) => request(axios, basePath));
         },
         /**
@@ -11778,7 +11959,7 @@ export const GroupsApiFactory = function (configuration?: Configuration, basePat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        groupsInviteCode(requestParameters: GroupsApiGroupsInviteCodeRequest, options?: AxiosRequestConfig): AxiosPromise<GroupsInviteCode200Response> {
+        groupsInviteCode(requestParameters: GroupsApiGroupsInviteCodeRequest, options?: RawAxiosRequestConfig): AxiosPromise<GroupsInviteCode200Response> {
             return localVarFp.groupsInviteCode(requestParameters.accountId, requestParameters.id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -11788,7 +11969,7 @@ export const GroupsApiFactory = function (configuration?: Configuration, basePat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        groupsJoin(requestParameters: GroupsApiGroupsJoinRequest, options?: AxiosRequestConfig): AxiosPromise<GroupMetadata> {
+        groupsJoin(requestParameters: GroupsApiGroupsJoinRequest, options?: RawAxiosRequestConfig): AxiosPromise<GroupMetadata> {
             return localVarFp.groupsJoin(requestParameters.accountId, requestParameters.id, requestParameters.code, options).then((request) => request(axios, basePath));
         },
         /**
@@ -11798,7 +11979,7 @@ export const GroupsApiFactory = function (configuration?: Configuration, basePat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        groupsLeave(requestParameters: GroupsApiGroupsLeaveRequest, options?: AxiosRequestConfig): AxiosPromise<{ [key: string]: any; }> {
+        groupsLeave(requestParameters: GroupsApiGroupsLeaveRequest, options?: RawAxiosRequestConfig): AxiosPromise<{ [key: string]: any; }> {
             return localVarFp.groupsLeave(requestParameters.accountId, requestParameters.id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -11808,7 +11989,7 @@ export const GroupsApiFactory = function (configuration?: Configuration, basePat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        groupsPatch(requestParameters: GroupsApiGroupsPatchRequest, options?: AxiosRequestConfig): AxiosPromise<GroupMetadata> {
+        groupsPatch(requestParameters: GroupsApiGroupsPatchRequest, options?: RawAxiosRequestConfig): AxiosPromise<GroupMetadata> {
             return localVarFp.groupsPatch(requestParameters.accountId, requestParameters.id, requestParameters.groupAction, options).then((request) => request(axios, basePath));
         },
         /**
@@ -11818,7 +11999,7 @@ export const GroupsApiFactory = function (configuration?: Configuration, basePat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        groupsPost(requestParameters: GroupsApiGroupsPostRequest, options?: AxiosRequestConfig): AxiosPromise<GroupMetadata> {
+        groupsPost(requestParameters: GroupsApiGroupsPostRequest, options?: RawAxiosRequestConfig): AxiosPromise<GroupMetadata> {
             return localVarFp.groupsPost(requestParameters.accountId, requestParameters.groupCreate, options).then((request) => request(axios, basePath));
         },
     };
@@ -11986,7 +12167,7 @@ export class GroupsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof GroupsApi
      */
-    public groupsGet(requestParameters: GroupsApiGroupsGetRequest, options?: AxiosRequestConfig) {
+    public groupsGet(requestParameters: GroupsApiGroupsGetRequest, options?: RawAxiosRequestConfig) {
         return GroupsApiFp(this.configuration).groupsGet(requestParameters.accountId, requestParameters.id, requestParameters.forceRefresh, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -11998,7 +12179,7 @@ export class GroupsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof GroupsApi
      */
-    public groupsInviteCode(requestParameters: GroupsApiGroupsInviteCodeRequest, options?: AxiosRequestConfig) {
+    public groupsInviteCode(requestParameters: GroupsApiGroupsInviteCodeRequest, options?: RawAxiosRequestConfig) {
         return GroupsApiFp(this.configuration).groupsInviteCode(requestParameters.accountId, requestParameters.id, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -12010,7 +12191,7 @@ export class GroupsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof GroupsApi
      */
-    public groupsJoin(requestParameters: GroupsApiGroupsJoinRequest, options?: AxiosRequestConfig) {
+    public groupsJoin(requestParameters: GroupsApiGroupsJoinRequest, options?: RawAxiosRequestConfig) {
         return GroupsApiFp(this.configuration).groupsJoin(requestParameters.accountId, requestParameters.id, requestParameters.code, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -12022,7 +12203,7 @@ export class GroupsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof GroupsApi
      */
-    public groupsLeave(requestParameters: GroupsApiGroupsLeaveRequest, options?: AxiosRequestConfig) {
+    public groupsLeave(requestParameters: GroupsApiGroupsLeaveRequest, options?: RawAxiosRequestConfig) {
         return GroupsApiFp(this.configuration).groupsLeave(requestParameters.accountId, requestParameters.id, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -12034,7 +12215,7 @@ export class GroupsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof GroupsApi
      */
-    public groupsPatch(requestParameters: GroupsApiGroupsPatchRequest, options?: AxiosRequestConfig) {
+    public groupsPatch(requestParameters: GroupsApiGroupsPatchRequest, options?: RawAxiosRequestConfig) {
         return GroupsApiFp(this.configuration).groupsPatch(requestParameters.accountId, requestParameters.id, requestParameters.groupAction, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -12046,10 +12227,11 @@ export class GroupsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof GroupsApi
      */
-    public groupsPost(requestParameters: GroupsApiGroupsPostRequest, options?: AxiosRequestConfig) {
+    public groupsPost(requestParameters: GroupsApiGroupsPostRequest, options?: RawAxiosRequestConfig) {
         return GroupsApiFp(this.configuration).groupsPost(requestParameters.accountId, requestParameters.groupCreate, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -12066,7 +12248,7 @@ export const MailApiAxiosParamCreator = function (configuration?: Configuration)
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        mailRegisterPost: async (accountId: string, mailRegisterPostRequest?: MailRegisterPostRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        mailRegisterPost: async (accountId: string, mailRegisterPostRequest?: MailRegisterPostRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('mailRegisterPost', 'accountId', accountId)
             const localVarPath = `/mail/register/{accountId}`
@@ -12107,7 +12289,7 @@ export const MailApiAxiosParamCreator = function (configuration?: Configuration)
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        webhookMailPost: async (webhookMailPostRequest?: WebhookMailPostRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        webhookMailPost: async (webhookMailPostRequest?: WebhookMailPostRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/mail/webhook`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -12152,9 +12334,11 @@ export const MailApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async mailRegisterPost(accountId: string, mailRegisterPostRequest?: MailRegisterPostRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async mailRegisterPost(accountId: string, mailRegisterPostRequest?: MailRegisterPostRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.mailRegisterPost(accountId, mailRegisterPostRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MailApi.mailRegisterPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -12163,9 +12347,11 @@ export const MailApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async webhookMailPost(webhookMailPostRequest?: WebhookMailPostRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async webhookMailPost(webhookMailPostRequest?: WebhookMailPostRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.webhookMailPost(webhookMailPostRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MailApi.webhookMailPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -12184,7 +12370,7 @@ export const MailApiFactory = function (configuration?: Configuration, basePath?
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        mailRegisterPost(requestParameters: MailApiMailRegisterPostRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        mailRegisterPost(requestParameters: MailApiMailRegisterPostRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.mailRegisterPost(requestParameters.accountId, requestParameters.mailRegisterPostRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -12194,7 +12380,7 @@ export const MailApiFactory = function (configuration?: Configuration, basePath?
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        webhookMailPost(requestParameters: MailApiWebhookMailPostRequest = {}, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        webhookMailPost(requestParameters: MailApiWebhookMailPostRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.webhookMailPost(requestParameters.webhookMailPostRequest, options).then((request) => request(axios, basePath));
         },
     };
@@ -12250,7 +12436,7 @@ export class MailApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof MailApi
      */
-    public mailRegisterPost(requestParameters: MailApiMailRegisterPostRequest, options?: AxiosRequestConfig) {
+    public mailRegisterPost(requestParameters: MailApiMailRegisterPostRequest, options?: RawAxiosRequestConfig) {
         return MailApiFp(this.configuration).mailRegisterPost(requestParameters.accountId, requestParameters.mailRegisterPostRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -12262,10 +12448,11 @@ export class MailApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof MailApi
      */
-    public webhookMailPost(requestParameters: MailApiWebhookMailPostRequest = {}, options?: AxiosRequestConfig) {
+    public webhookMailPost(requestParameters: MailApiWebhookMailPostRequest = {}, options?: RawAxiosRequestConfig) {
         return MailApiFp(this.configuration).webhookMailPost(requestParameters.webhookMailPostRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -12276,6 +12463,107 @@ export const MessagesApiAxiosParamCreator = function (configuration?: Configurat
     return {
         /**
          * 
+         * @summary Perform bulk actions on messages
+         * @param {MessagesBulkActionStatusEnum} status 
+         * @param {Array<string>} [accountId] Get contacts only belonging to this account
+         * @param {MessagesGetRangeParameter} [range] Fetch messages only within this range. If not specified, fetches all messages
+         * @param {string} [chatId] 
+         * @param {MessagesBulkActionRequest} [messagesBulkActionRequest] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        messagesBulkAction: async (status: MessagesBulkActionStatusEnum, accountId?: Array<string>, range?: MessagesGetRangeParameter, chatId?: string, messagesBulkActionRequest?: MessagesBulkActionRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'status' is not null or undefined
+            assertParamExists('messagesBulkAction', 'status', status)
+            const localVarPath = `/messages/bulk-action`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication chatdaddy required
+            // oauth required
+            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", ["MESSAGES_SEND_TO_ALL", "MESSAGES_SEND_TO_ASSIGNED"], configuration)
+
+            if (accountId) {
+                localVarQueryParameter['accountId'] = accountId;
+            }
+
+            if (range !== undefined) {
+                localVarQueryParameter['range'] = range;
+            }
+
+            if (chatId !== undefined) {
+                localVarQueryParameter['chatId'] = chatId;
+            }
+
+            if (status !== undefined) {
+                localVarQueryParameter['status'] = status;
+            }
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(messagesBulkActionRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary Bulk message Get
+         * @param {Array<MessageID>} ids Message IDs to fetch
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        messagesBulkGet: async (ids: Array<MessageID>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'ids' is not null or undefined
+            assertParamExists('messagesBulkGet', 'ids', ids)
+            const localVarPath = `/messages/bulk`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication chatdaddy required
+            // oauth required
+            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", [], configuration)
+
+            if (ids) {
+                localVarQueryParameter['ids'] = ids;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
          * @summary Delete a message
          * @param {string} accountId 
          * @param {string} chatId 
@@ -12283,7 +12571,7 @@ export const MessagesApiAxiosParamCreator = function (configuration?: Configurat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messagesDelete: async (accountId: string, chatId: string, id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        messagesDelete: async (accountId: string, chatId: string, id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('messagesDelete', 'accountId', accountId)
             // verify required parameter 'chatId' is not null or undefined
@@ -12322,14 +12610,15 @@ export const MessagesApiAxiosParamCreator = function (configuration?: Configurat
         },
         /**
          * 
-         * @summary Clears all pending/error messages
-         * @param {'pending' | 'error' | 'cancelled'} status 
+         * @summary Clears all pending/error messages. Deprecated, use the /messages/bulk-action route instead
+         * @param {MessagesDeletePendingStatusEnum} status Will match all messages with the given status. 
          * @param {string} [accountId] If specified, only clears messages of this account
          * @param {string} [chatId] If specified, only clears messages of this chat
          * @param {*} [options] Override http request option.
+         * @deprecated
          * @throws {RequiredError}
          */
-        messagesDeletePending: async (status: 'pending' | 'error' | 'cancelled', accountId?: string, chatId?: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        messagesDeletePending: async (status: MessagesDeletePendingStatusEnum, accountId?: string, chatId?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'status' is not null or undefined
             assertParamExists('messagesDeletePending', 'status', status)
             const localVarPath = `/messages/{status}/retry`
@@ -12377,7 +12666,7 @@ export const MessagesApiAxiosParamCreator = function (configuration?: Configurat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messagesForward: async (accountId: string, chatId: string, id: string, toChatId: MessagesForwardToChatIdParameter, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        messagesForward: async (accountId: string, chatId: string, id: string, toChatId: MessagesForwardToChatIdParameter, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('messagesForward', 'accountId', accountId)
             // verify required parameter 'chatId' is not null or undefined
@@ -12431,14 +12720,14 @@ export const MessagesApiAxiosParamCreator = function (configuration?: Configurat
          * @param {number} [count] Number of items to return
          * @param {boolean} [forceReload] Deletes all cached messages for this chat &amp; fetches messages again from the original API source
          * @param {boolean} [fetchFromPlatform] Fetches messages from the platform, if the messages are not present in the DB
-         * @param {'note' | 'pending' | 'error'} [status] fetch only \&quot;notes\&quot;, \&quot;pending\&quot; or \&quot;error\&quot; messages
+         * @param {Array<MessageStatus>} [status] fetch messages belonging to the particular status
          * @param {boolean} [fromMe] fetch only messages sent by me/or the other party
          * @param {Array<MessageAttachmentType>} [attachmentType] Fetch only messages with attachments of this type
          * @param {boolean} [includeCursorMessage] should include cursor message in the response
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messagesGet: async (accountId: string, chatId: string, range?: MessagesGetRangeParameter, action?: boolean, beforeId?: string, count?: number, forceReload?: boolean, fetchFromPlatform?: boolean, status?: 'note' | 'pending' | 'error', fromMe?: boolean, attachmentType?: Array<MessageAttachmentType>, includeCursorMessage?: boolean, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        messagesGet: async (accountId: string, chatId: string, range?: MessagesGetRangeParameter, action?: boolean, beforeId?: string, count?: number, forceReload?: boolean, fetchFromPlatform?: boolean, status?: Array<MessageStatus>, fromMe?: boolean, attachmentType?: Array<MessageAttachmentType>, includeCursorMessage?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('messagesGet', 'accountId', accountId)
             // verify required parameter 'chatId' is not null or undefined
@@ -12485,7 +12774,7 @@ export const MessagesApiAxiosParamCreator = function (configuration?: Configurat
                 localVarQueryParameter['fetchFromPlatform'] = fetchFromPlatform;
             }
 
-            if (status !== undefined) {
+            if (status) {
                 localVarQueryParameter['status'] = status;
             }
 
@@ -12522,7 +12811,7 @@ export const MessagesApiAxiosParamCreator = function (configuration?: Configurat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messagesPatch: async (accountId: string, chatId: string, id: string, messagesPatchRequest?: MessagesPatchRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        messagesPatch: async (accountId: string, chatId: string, id: string, messagesPatchRequest?: MessagesPatchRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('messagesPatch', 'accountId', accountId)
             // verify required parameter 'chatId' is not null or undefined
@@ -12564,12 +12853,14 @@ export const MessagesApiAxiosParamCreator = function (configuration?: Configurat
         },
         /**
          * Retry all the messages in a given status
-         * @param {'pending' | 'error' | 'cancelled'} status 
+         * @summary Use the /messages/bulk-action route instead
+         * @param {MessagesPatchPendingStatusEnum} status Will match all messages with the given status. 
          * @param {MessagesPatchPendingRequest} [messagesPatchPendingRequest] 
          * @param {*} [options] Override http request option.
+         * @deprecated
          * @throws {RequiredError}
          */
-        messagesPatchPending: async (status: 'pending' | 'error' | 'cancelled', messagesPatchPendingRequest?: MessagesPatchPendingRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        messagesPatchPending: async (status: MessagesPatchPendingStatusEnum, messagesPatchPendingRequest?: MessagesPatchPendingRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'status' is not null or undefined
             assertParamExists('messagesPatchPending', 'status', status)
             const localVarPath = `/messages/{status}/retry`
@@ -12607,15 +12898,13 @@ export const MessagesApiAxiosParamCreator = function (configuration?: Configurat
          * Send a message with text and/or attachments. The `text` property can be used as a [mustache](https://mustache.github.io) template which automatically prefills data from the contact\'s details including **custom fields**. Some examples:   1. `{\"text\": \"Hello there {{name}}\"}` will automatically pre-fill the contact\'s name (if present)   2. `{\"text\": \"Hello {{name}} your number is {{phoneNumber}}\"}` will automatically pre-fill the contact\'s name & phone number   3. `{\"text\": \"Hello {{name}} your pet name is {{pet name}}\"}` will automatically pre-fill `petName` if the contact has such a custom field
          * @summary Send a message
          * @param {string} accountId The account to use to send the message. Pass as the literal \&quot;random\&quot; to use a random account 
-         * @param {string} chatId The contact to send the message to.  To send to a phone number, supply the phone number with country code and no spaces. Eg. &#x60;911234534211&#x60;, &#x60;91345567543@s.whatsapp.net&#x60; 
+         * @param {string} chatId The contact to send the message to. To send to a phone number, supply the phone number with country code and no spaces. Eg. &#x60;911234534211&#x60;, &#x60;91345567543@s.whatsapp.net&#x60; 
          * @param {boolean} [requireOpenAccount] Only sends the message if the account is open, returns 428 otherwise
-         * @param {boolean} [useRandomAccountIfAccountClosed] Use random account (if available) to send the message, if the account specified is closed
-         * @param {boolean} [includeMarketingMessage] Includes the default marketing message for the account in the message
          * @param {MessageCompose} [messageCompose] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messagesPost: async (accountId: string, chatId: string, requireOpenAccount?: boolean, useRandomAccountIfAccountClosed?: boolean, includeMarketingMessage?: boolean, messageCompose?: MessageCompose, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        messagesPost: async (accountId: string, chatId: string, requireOpenAccount?: boolean, messageCompose?: MessageCompose, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('messagesPost', 'accountId', accountId)
             // verify required parameter 'chatId' is not null or undefined
@@ -12642,14 +12931,6 @@ export const MessagesApiAxiosParamCreator = function (configuration?: Configurat
                 localVarQueryParameter['requireOpenAccount'] = requireOpenAccount;
             }
 
-            if (useRandomAccountIfAccountClosed !== undefined) {
-                localVarQueryParameter['useRandomAccountIfAccountClosed'] = useRandomAccountIfAccountClosed;
-            }
-
-            if (includeMarketingMessage !== undefined) {
-                localVarQueryParameter['includeMarketingMessage'] = includeMarketingMessage;
-            }
-
 
     
             localVarHeaderParameter['Content-Type'] = 'application/json';
@@ -12673,7 +12954,7 @@ export const MessagesApiAxiosParamCreator = function (configuration?: Configurat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messagesRefresh: async (accountId: string, chatId: string, id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        messagesRefresh: async (accountId: string, chatId: string, id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('messagesRefresh', 'accountId', accountId)
             // verify required parameter 'chatId' is not null or undefined
@@ -12721,11 +13002,11 @@ export const MessagesApiAxiosParamCreator = function (configuration?: Configurat
          * @param {string} [chatId] 
          * @param {boolean} [returnChats] Return the corresponding chats alongside the messages
          * @param {boolean} [fromMe] Fetch only messages sent by me/or the other party. If not specified, fetches both
-         * @param {Array<'note' | 'pending' | 'error'>} [status] fetch only \&quot;notes\&quot;, \&quot;pending\&quot; or \&quot;error\&quot; messages
+         * @param {Array<MessagesSearchStatusEnum>} [status] fetch only \&quot;notes\&quot;, \&quot;pending\&quot; or \&quot;error\&quot; messages
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messagesSearch: async (accountId?: Array<string>, range?: MessagesGetRangeParameter, q?: string, page?: string, count?: number, chatId?: string, returnChats?: boolean, fromMe?: boolean, status?: Array<'note' | 'pending' | 'error'>, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        messagesSearch: async (accountId?: Array<string>, range?: MessagesGetRangeParameter, q?: string, page?: string, count?: number, chatId?: string, returnChats?: boolean, fromMe?: boolean, status?: Array<MessagesSearchStatusEnum>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/messages/search`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -12798,7 +13079,7 @@ export const MessagesApiAxiosParamCreator = function (configuration?: Configurat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messagesSend: async (accountId: string, requireOpenAccount?: boolean, multiMessageCompose?: MultiMessageCompose, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        messagesSend: async (accountId: string, requireOpenAccount?: boolean, multiMessageCompose?: MultiMessageCompose, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('messagesSend', 'accountId', accountId)
             const localVarPath = `/messages`;
@@ -12840,15 +13121,71 @@ export const MessagesApiAxiosParamCreator = function (configuration?: Configurat
             };
         },
         /**
+         * 
+         * @summary Transcribe a voice message
+         * @param {string} accountId 
+         * @param {string} chatId 
+         * @param {string} id 
+         * @param {number} index 
+         * @param {boolean} [waitForCompletion] If true, the API will wait for the transcription to be completed before returning
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        messagesTranscribe: async (accountId: string, chatId: string, id: string, index: number, waitForCompletion?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'accountId' is not null or undefined
+            assertParamExists('messagesTranscribe', 'accountId', accountId)
+            // verify required parameter 'chatId' is not null or undefined
+            assertParamExists('messagesTranscribe', 'chatId', chatId)
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('messagesTranscribe', 'id', id)
+            // verify required parameter 'index' is not null or undefined
+            assertParamExists('messagesTranscribe', 'index', index)
+            const localVarPath = `/messages/{accountId}/{chatId}/{id}/{index}/transcribe`
+                .replace(`{${"accountId"}}`, encodeURIComponent(String(accountId)))
+                .replace(`{${"chatId"}}`, encodeURIComponent(String(chatId)))
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)))
+                .replace(`{${"index"}}`, encodeURIComponent(String(index)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication chatdaddy required
+            // oauth required
+            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", ["AUTOCOMPLETE_GET"], configuration)
+
+            if (waitForCompletion !== undefined) {
+                localVarQueryParameter['waitForCompletion'] = waitForCompletion;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * Given a particular message, calling this route will decode all the message attachments
          * @summary Permanently store attachments of a message
          * @param {string} accountId 
          * @param {string} chatId 
          * @param {string} id 
+         * @param {boolean} [waitForCompletion] If true, the API will wait for the attachments to be stored before returning
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        permanentlyStoreAttachments: async (accountId: string, chatId: string, id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        permanentlyStoreAttachments: async (accountId: string, chatId: string, id: string, waitForCompletion?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('permanentlyStoreAttachments', 'accountId', accountId)
             // verify required parameter 'chatId' is not null or undefined
@@ -12874,6 +13211,10 @@ export const MessagesApiAxiosParamCreator = function (configuration?: Configurat
             // oauth required
             await setOAuthToObject(localVarHeaderParameter, "chatdaddy", [], configuration)
 
+            if (waitForCompletion !== undefined) {
+                localVarQueryParameter['waitForCompletion'] = waitForCompletion;
+            }
+
 
     
             setSearchParams(localVarUrlObj, localVarQueryParameter);
@@ -12897,6 +13238,36 @@ export const MessagesApiFp = function(configuration?: Configuration) {
     return {
         /**
          * 
+         * @summary Perform bulk actions on messages
+         * @param {MessagesBulkActionStatusEnum} status 
+         * @param {Array<string>} [accountId] Get contacts only belonging to this account
+         * @param {MessagesGetRangeParameter} [range] Fetch messages only within this range. If not specified, fetches all messages
+         * @param {string} [chatId] 
+         * @param {MessagesBulkActionRequest} [messagesBulkActionRequest] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async messagesBulkAction(status: MessagesBulkActionStatusEnum, accountId?: Array<string>, range?: MessagesGetRangeParameter, chatId?: string, messagesBulkActionRequest?: MessagesBulkActionRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.messagesBulkAction(status, accountId, range, chatId, messagesBulkActionRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MessagesApi.messagesBulkAction']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @summary Bulk message Get
+         * @param {Array<MessageID>} ids Message IDs to fetch
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async messagesBulkGet(ids: Array<MessageID>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Message>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.messagesBulkGet(ids, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MessagesApi.messagesBulkGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
          * @summary Delete a message
          * @param {string} accountId 
          * @param {string} chatId 
@@ -12904,22 +13275,27 @@ export const MessagesApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async messagesDelete(accountId: string, chatId: string, id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async messagesDelete(accountId: string, chatId: string, id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.messagesDelete(accountId, chatId, id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MessagesApi.messagesDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
-         * @summary Clears all pending/error messages
-         * @param {'pending' | 'error' | 'cancelled'} status 
+         * @summary Clears all pending/error messages. Deprecated, use the /messages/bulk-action route instead
+         * @param {MessagesDeletePendingStatusEnum} status Will match all messages with the given status. 
          * @param {string} [accountId] If specified, only clears messages of this account
          * @param {string} [chatId] If specified, only clears messages of this chat
          * @param {*} [options] Override http request option.
+         * @deprecated
          * @throws {RequiredError}
          */
-        async messagesDeletePending(status: 'pending' | 'error' | 'cancelled', accountId?: string, chatId?: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async messagesDeletePending(status: MessagesDeletePendingStatusEnum, accountId?: string, chatId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.messagesDeletePending(status, accountId, chatId, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MessagesApi.messagesDeletePending']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -12930,9 +13306,11 @@ export const MessagesApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async messagesForward(accountId: string, chatId: string, id: string, toChatId: MessagesForwardToChatIdParameter, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Message>>> {
+        async messagesForward(accountId: string, chatId: string, id: string, toChatId: MessagesForwardToChatIdParameter, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Message>>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.messagesForward(accountId, chatId, id, toChatId, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MessagesApi.messagesForward']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -12945,16 +13323,18 @@ export const MessagesApiFp = function(configuration?: Configuration) {
          * @param {number} [count] Number of items to return
          * @param {boolean} [forceReload] Deletes all cached messages for this chat &amp; fetches messages again from the original API source
          * @param {boolean} [fetchFromPlatform] Fetches messages from the platform, if the messages are not present in the DB
-         * @param {'note' | 'pending' | 'error'} [status] fetch only \&quot;notes\&quot;, \&quot;pending\&quot; or \&quot;error\&quot; messages
+         * @param {Array<MessageStatus>} [status] fetch messages belonging to the particular status
          * @param {boolean} [fromMe] fetch only messages sent by me/or the other party
          * @param {Array<MessageAttachmentType>} [attachmentType] Fetch only messages with attachments of this type
          * @param {boolean} [includeCursorMessage] should include cursor message in the response
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async messagesGet(accountId: string, chatId: string, range?: MessagesGetRangeParameter, action?: boolean, beforeId?: string, count?: number, forceReload?: boolean, fetchFromPlatform?: boolean, status?: 'note' | 'pending' | 'error', fromMe?: boolean, attachmentType?: Array<MessageAttachmentType>, includeCursorMessage?: boolean, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<MessagesGet200Response>> {
+        async messagesGet(accountId: string, chatId: string, range?: MessagesGetRangeParameter, action?: boolean, beforeId?: string, count?: number, forceReload?: boolean, fetchFromPlatform?: boolean, status?: Array<MessageStatus>, fromMe?: boolean, attachmentType?: Array<MessageAttachmentType>, includeCursorMessage?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<MessagesGet200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.messagesGet(accountId, chatId, range, action, beforeId, count, forceReload, fetchFromPlatform, status, fromMe, attachmentType, includeCursorMessage, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MessagesApi.messagesGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * Can reschedule a message, update the content of a note or mark it as resolved 
@@ -12966,36 +13346,42 @@ export const MessagesApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async messagesPatch(accountId: string, chatId: string, id: string, messagesPatchRequest?: MessagesPatchRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Message>> {
+        async messagesPatch(accountId: string, chatId: string, id: string, messagesPatchRequest?: MessagesPatchRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Message>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.messagesPatch(accountId, chatId, id, messagesPatchRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MessagesApi.messagesPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * Retry all the messages in a given status
-         * @param {'pending' | 'error' | 'cancelled'} status 
+         * @summary Use the /messages/bulk-action route instead
+         * @param {MessagesPatchPendingStatusEnum} status Will match all messages with the given status. 
          * @param {MessagesPatchPendingRequest} [messagesPatchPendingRequest] 
          * @param {*} [options] Override http request option.
+         * @deprecated
          * @throws {RequiredError}
          */
-        async messagesPatchPending(status: 'pending' | 'error' | 'cancelled', messagesPatchPendingRequest?: MessagesPatchPendingRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async messagesPatchPending(status: MessagesPatchPendingStatusEnum, messagesPatchPendingRequest?: MessagesPatchPendingRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.messagesPatchPending(status, messagesPatchPendingRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MessagesApi.messagesPatchPending']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * Send a message with text and/or attachments. The `text` property can be used as a [mustache](https://mustache.github.io) template which automatically prefills data from the contact\'s details including **custom fields**. Some examples:   1. `{\"text\": \"Hello there {{name}}\"}` will automatically pre-fill the contact\'s name (if present)   2. `{\"text\": \"Hello {{name}} your number is {{phoneNumber}}\"}` will automatically pre-fill the contact\'s name & phone number   3. `{\"text\": \"Hello {{name}} your pet name is {{pet name}}\"}` will automatically pre-fill `petName` if the contact has such a custom field
          * @summary Send a message
          * @param {string} accountId The account to use to send the message. Pass as the literal \&quot;random\&quot; to use a random account 
-         * @param {string} chatId The contact to send the message to.  To send to a phone number, supply the phone number with country code and no spaces. Eg. &#x60;911234534211&#x60;, &#x60;91345567543@s.whatsapp.net&#x60; 
+         * @param {string} chatId The contact to send the message to. To send to a phone number, supply the phone number with country code and no spaces. Eg. &#x60;911234534211&#x60;, &#x60;91345567543@s.whatsapp.net&#x60; 
          * @param {boolean} [requireOpenAccount] Only sends the message if the account is open, returns 428 otherwise
-         * @param {boolean} [useRandomAccountIfAccountClosed] Use random account (if available) to send the message, if the account specified is closed
-         * @param {boolean} [includeMarketingMessage] Includes the default marketing message for the account in the message
          * @param {MessageCompose} [messageCompose] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async messagesPost(accountId: string, chatId: string, requireOpenAccount?: boolean, useRandomAccountIfAccountClosed?: boolean, includeMarketingMessage?: boolean, messageCompose?: MessageCompose, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Message>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.messagesPost(accountId, chatId, requireOpenAccount, useRandomAccountIfAccountClosed, includeMarketingMessage, messageCompose, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        async messagesPost(accountId: string, chatId: string, requireOpenAccount?: boolean, messageCompose?: MessageCompose, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Message>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.messagesPost(accountId, chatId, requireOpenAccount, messageCompose, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MessagesApi.messagesPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -13006,9 +13392,11 @@ export const MessagesApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async messagesRefresh(accountId: string, chatId: string, id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Message>> {
+        async messagesRefresh(accountId: string, chatId: string, id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Message>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.messagesRefresh(accountId, chatId, id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MessagesApi.messagesRefresh']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -13021,13 +13409,15 @@ export const MessagesApiFp = function(configuration?: Configuration) {
          * @param {string} [chatId] 
          * @param {boolean} [returnChats] Return the corresponding chats alongside the messages
          * @param {boolean} [fromMe] Fetch only messages sent by me/or the other party. If not specified, fetches both
-         * @param {Array<'note' | 'pending' | 'error'>} [status] fetch only \&quot;notes\&quot;, \&quot;pending\&quot; or \&quot;error\&quot; messages
+         * @param {Array<MessagesSearchStatusEnum>} [status] fetch only \&quot;notes\&quot;, \&quot;pending\&quot; or \&quot;error\&quot; messages
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async messagesSearch(accountId?: Array<string>, range?: MessagesGetRangeParameter, q?: string, page?: string, count?: number, chatId?: string, returnChats?: boolean, fromMe?: boolean, status?: Array<'note' | 'pending' | 'error'>, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<MessagesSearch200Response>> {
+        async messagesSearch(accountId?: Array<string>, range?: MessagesGetRangeParameter, q?: string, page?: string, count?: number, chatId?: string, returnChats?: boolean, fromMe?: boolean, status?: Array<MessagesSearchStatusEnum>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<MessagesSearch200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.messagesSearch(accountId, range, q, page, count, chatId, returnChats, fromMe, status, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MessagesApi.messagesSearch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * Send a message with text and/or attachments. The `text` property can be used as a [mustache](https://mustache.github.io) template which automatically prefills data from the contact\'s details including **custom fields**. Some examples:   1. `{\"text\": \"Hello there {{name}}\"}` will automatically pre-fill the contact\'s name (if present)   2. `{\"text\": \"Hello {{name}} your number is {{phoneNumber}}\"}` will automatically pre-fill the contact\'s name & phone number   3. `{\"text\": \"Hello {{name}} your pet name is {{pet name}}\"}` will automatically pre-fill `petName` if the contact has such a custom field
@@ -13038,9 +13428,28 @@ export const MessagesApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async messagesSend(accountId: string, requireOpenAccount?: boolean, multiMessageCompose?: MultiMessageCompose, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Message>>> {
+        async messagesSend(accountId: string, requireOpenAccount?: boolean, multiMessageCompose?: MultiMessageCompose, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Message>>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.messagesSend(accountId, requireOpenAccount, multiMessageCompose, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MessagesApi.messagesSend']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @summary Transcribe a voice message
+         * @param {string} accountId 
+         * @param {string} chatId 
+         * @param {string} id 
+         * @param {number} index 
+         * @param {boolean} [waitForCompletion] If true, the API will wait for the transcription to be completed before returning
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async messagesTranscribe(accountId: string, chatId: string, id: string, index: number, waitForCompletion?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.messagesTranscribe(accountId, chatId, id, index, waitForCompletion, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MessagesApi.messagesTranscribe']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * Given a particular message, calling this route will decode all the message attachments
@@ -13048,12 +13457,15 @@ export const MessagesApiFp = function(configuration?: Configuration) {
          * @param {string} accountId 
          * @param {string} chatId 
          * @param {string} id 
+         * @param {boolean} [waitForCompletion] If true, the API will wait for the attachments to be stored before returning
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async permanentlyStoreAttachments(accountId: string, chatId: string, id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PermanentlyStoreAttachments200Response>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.permanentlyStoreAttachments(accountId, chatId, id, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+        async permanentlyStoreAttachments(accountId: string, chatId: string, id: string, waitForCompletion?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PermanentlyStoreAttachments200Response>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.permanentlyStoreAttachments(accountId, chatId, id, waitForCompletion, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MessagesApi.permanentlyStoreAttachments']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -13067,22 +13479,43 @@ export const MessagesApiFactory = function (configuration?: Configuration, baseP
     return {
         /**
          * 
+         * @summary Perform bulk actions on messages
+         * @param {MessagesApiMessagesBulkActionRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        messagesBulkAction(requestParameters: MessagesApiMessagesBulkActionRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
+            return localVarFp.messagesBulkAction(requestParameters.status, requestParameters.accountId, requestParameters.range, requestParameters.chatId, requestParameters.messagesBulkActionRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Bulk message Get
+         * @param {MessagesApiMessagesBulkGetRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        messagesBulkGet(requestParameters: MessagesApiMessagesBulkGetRequest, options?: RawAxiosRequestConfig): AxiosPromise<Array<Message>> {
+            return localVarFp.messagesBulkGet(requestParameters.ids, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
          * @summary Delete a message
          * @param {MessagesApiMessagesDeleteRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messagesDelete(requestParameters: MessagesApiMessagesDeleteRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        messagesDelete(requestParameters: MessagesApiMessagesDeleteRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.messagesDelete(requestParameters.accountId, requestParameters.chatId, requestParameters.id, options).then((request) => request(axios, basePath));
         },
         /**
          * 
-         * @summary Clears all pending/error messages
+         * @summary Clears all pending/error messages. Deprecated, use the /messages/bulk-action route instead
          * @param {MessagesApiMessagesDeletePendingRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
+         * @deprecated
          * @throws {RequiredError}
          */
-        messagesDeletePending(requestParameters: MessagesApiMessagesDeletePendingRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        messagesDeletePending(requestParameters: MessagesApiMessagesDeletePendingRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.messagesDeletePending(requestParameters.status, requestParameters.accountId, requestParameters.chatId, options).then((request) => request(axios, basePath));
         },
         /**
@@ -13091,7 +13524,7 @@ export const MessagesApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messagesForward(requestParameters: MessagesApiMessagesForwardRequest, options?: AxiosRequestConfig): AxiosPromise<Array<Message>> {
+        messagesForward(requestParameters: MessagesApiMessagesForwardRequest, options?: RawAxiosRequestConfig): AxiosPromise<Array<Message>> {
             return localVarFp.messagesForward(requestParameters.accountId, requestParameters.chatId, requestParameters.id, requestParameters.toChatId, options).then((request) => request(axios, basePath));
         },
         /**
@@ -13101,7 +13534,7 @@ export const MessagesApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messagesGet(requestParameters: MessagesApiMessagesGetRequest, options?: AxiosRequestConfig): AxiosPromise<MessagesGet200Response> {
+        messagesGet(requestParameters: MessagesApiMessagesGetRequest, options?: RawAxiosRequestConfig): AxiosPromise<MessagesGet200Response> {
             return localVarFp.messagesGet(requestParameters.accountId, requestParameters.chatId, requestParameters.range, requestParameters.action, requestParameters.beforeId, requestParameters.count, requestParameters.forceReload, requestParameters.fetchFromPlatform, requestParameters.status, requestParameters.fromMe, requestParameters.attachmentType, requestParameters.includeCursorMessage, options).then((request) => request(axios, basePath));
         },
         /**
@@ -13111,16 +13544,18 @@ export const MessagesApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messagesPatch(requestParameters: MessagesApiMessagesPatchRequest, options?: AxiosRequestConfig): AxiosPromise<Message> {
+        messagesPatch(requestParameters: MessagesApiMessagesPatchRequest, options?: RawAxiosRequestConfig): AxiosPromise<Message> {
             return localVarFp.messagesPatch(requestParameters.accountId, requestParameters.chatId, requestParameters.id, requestParameters.messagesPatchRequest, options).then((request) => request(axios, basePath));
         },
         /**
          * Retry all the messages in a given status
+         * @summary Use the /messages/bulk-action route instead
          * @param {MessagesApiMessagesPatchPendingRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
+         * @deprecated
          * @throws {RequiredError}
          */
-        messagesPatchPending(requestParameters: MessagesApiMessagesPatchPendingRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        messagesPatchPending(requestParameters: MessagesApiMessagesPatchPendingRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.messagesPatchPending(requestParameters.status, requestParameters.messagesPatchPendingRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -13130,8 +13565,8 @@ export const MessagesApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messagesPost(requestParameters: MessagesApiMessagesPostRequest, options?: AxiosRequestConfig): AxiosPromise<Array<Message>> {
-            return localVarFp.messagesPost(requestParameters.accountId, requestParameters.chatId, requestParameters.requireOpenAccount, requestParameters.useRandomAccountIfAccountClosed, requestParameters.includeMarketingMessage, requestParameters.messageCompose, options).then((request) => request(axios, basePath));
+        messagesPost(requestParameters: MessagesApiMessagesPostRequest, options?: RawAxiosRequestConfig): AxiosPromise<Array<Message>> {
+            return localVarFp.messagesPost(requestParameters.accountId, requestParameters.chatId, requestParameters.requireOpenAccount, requestParameters.messageCompose, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -13140,7 +13575,7 @@ export const MessagesApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messagesRefresh(requestParameters: MessagesApiMessagesRefreshRequest, options?: AxiosRequestConfig): AxiosPromise<Message> {
+        messagesRefresh(requestParameters: MessagesApiMessagesRefreshRequest, options?: RawAxiosRequestConfig): AxiosPromise<Message> {
             return localVarFp.messagesRefresh(requestParameters.accountId, requestParameters.chatId, requestParameters.id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -13150,7 +13585,7 @@ export const MessagesApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messagesSearch(requestParameters: MessagesApiMessagesSearchRequest = {}, options?: AxiosRequestConfig): AxiosPromise<MessagesSearch200Response> {
+        messagesSearch(requestParameters: MessagesApiMessagesSearchRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<MessagesSearch200Response> {
             return localVarFp.messagesSearch(requestParameters.accountId, requestParameters.range, requestParameters.q, requestParameters.page, requestParameters.count, requestParameters.chatId, requestParameters.returnChats, requestParameters.fromMe, requestParameters.status, options).then((request) => request(axios, basePath));
         },
         /**
@@ -13160,8 +13595,18 @@ export const MessagesApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        messagesSend(requestParameters: MessagesApiMessagesSendRequest, options?: AxiosRequestConfig): AxiosPromise<Array<Message>> {
+        messagesSend(requestParameters: MessagesApiMessagesSendRequest, options?: RawAxiosRequestConfig): AxiosPromise<Array<Message>> {
             return localVarFp.messagesSend(requestParameters.accountId, requestParameters.requireOpenAccount, requestParameters.multiMessageCompose, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Transcribe a voice message
+         * @param {MessagesApiMessagesTranscribeRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        messagesTranscribe(requestParameters: MessagesApiMessagesTranscribeRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
+            return localVarFp.messagesTranscribe(requestParameters.accountId, requestParameters.chatId, requestParameters.id, requestParameters.index, requestParameters.waitForCompletion, options).then((request) => request(axios, basePath));
         },
         /**
          * Given a particular message, calling this route will decode all the message attachments
@@ -13170,11 +13615,67 @@ export const MessagesApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        permanentlyStoreAttachments(requestParameters: MessagesApiPermanentlyStoreAttachmentsRequest, options?: AxiosRequestConfig): AxiosPromise<PermanentlyStoreAttachments200Response> {
-            return localVarFp.permanentlyStoreAttachments(requestParameters.accountId, requestParameters.chatId, requestParameters.id, options).then((request) => request(axios, basePath));
+        permanentlyStoreAttachments(requestParameters: MessagesApiPermanentlyStoreAttachmentsRequest, options?: RawAxiosRequestConfig): AxiosPromise<PermanentlyStoreAttachments200Response> {
+            return localVarFp.permanentlyStoreAttachments(requestParameters.accountId, requestParameters.chatId, requestParameters.id, requestParameters.waitForCompletion, options).then((request) => request(axios, basePath));
         },
     };
 };
+
+/**
+ * Request parameters for messagesBulkAction operation in MessagesApi.
+ * @export
+ * @interface MessagesApiMessagesBulkActionRequest
+ */
+export interface MessagesApiMessagesBulkActionRequest {
+    /**
+     * 
+     * @type {'pending' | 'error' | 'cancelled'}
+     * @memberof MessagesApiMessagesBulkAction
+     */
+    readonly status: MessagesBulkActionStatusEnum
+
+    /**
+     * Get contacts only belonging to this account
+     * @type {Array<string>}
+     * @memberof MessagesApiMessagesBulkAction
+     */
+    readonly accountId?: Array<string>
+
+    /**
+     * Fetch messages only within this range. If not specified, fetches all messages
+     * @type {MessagesGetRangeParameter}
+     * @memberof MessagesApiMessagesBulkAction
+     */
+    readonly range?: MessagesGetRangeParameter
+
+    /**
+     * 
+     * @type {string}
+     * @memberof MessagesApiMessagesBulkAction
+     */
+    readonly chatId?: string
+
+    /**
+     * 
+     * @type {MessagesBulkActionRequest}
+     * @memberof MessagesApiMessagesBulkAction
+     */
+    readonly messagesBulkActionRequest?: MessagesBulkActionRequest
+}
+
+/**
+ * Request parameters for messagesBulkGet operation in MessagesApi.
+ * @export
+ * @interface MessagesApiMessagesBulkGetRequest
+ */
+export interface MessagesApiMessagesBulkGetRequest {
+    /**
+     * Message IDs to fetch
+     * @type {Array<MessageID>}
+     * @memberof MessagesApiMessagesBulkGet
+     */
+    readonly ids: Array<MessageID>
+}
 
 /**
  * Request parameters for messagesDelete operation in MessagesApi.
@@ -13211,11 +13712,11 @@ export interface MessagesApiMessagesDeleteRequest {
  */
 export interface MessagesApiMessagesDeletePendingRequest {
     /**
-     * 
+     * Will match all messages with the given status. 
      * @type {'pending' | 'error' | 'cancelled'}
      * @memberof MessagesApiMessagesDeletePending
      */
-    readonly status: 'pending' | 'error' | 'cancelled'
+    readonly status: MessagesDeletePendingStatusEnum
 
     /**
      * If specified, only clears messages of this account
@@ -13330,11 +13831,11 @@ export interface MessagesApiMessagesGetRequest {
     readonly fetchFromPlatform?: boolean
 
     /**
-     * fetch only \&quot;notes\&quot;, \&quot;pending\&quot; or \&quot;error\&quot; messages
-     * @type {'note' | 'pending' | 'error'}
+     * fetch messages belonging to the particular status
+     * @type {Array<MessageStatus>}
      * @memberof MessagesApiMessagesGet
      */
-    readonly status?: 'note' | 'pending' | 'error'
+    readonly status?: Array<MessageStatus>
 
     /**
      * fetch only messages sent by me/or the other party
@@ -13400,11 +13901,11 @@ export interface MessagesApiMessagesPatchRequest {
  */
 export interface MessagesApiMessagesPatchPendingRequest {
     /**
-     * 
+     * Will match all messages with the given status. 
      * @type {'pending' | 'error' | 'cancelled'}
      * @memberof MessagesApiMessagesPatchPending
      */
-    readonly status: 'pending' | 'error' | 'cancelled'
+    readonly status: MessagesPatchPendingStatusEnum
 
     /**
      * 
@@ -13428,7 +13929,7 @@ export interface MessagesApiMessagesPostRequest {
     readonly accountId: string
 
     /**
-     * The contact to send the message to.  To send to a phone number, supply the phone number with country code and no spaces. Eg. &#x60;911234534211&#x60;, &#x60;91345567543@s.whatsapp.net&#x60; 
+     * The contact to send the message to. To send to a phone number, supply the phone number with country code and no spaces. Eg. &#x60;911234534211&#x60;, &#x60;91345567543@s.whatsapp.net&#x60; 
      * @type {string}
      * @memberof MessagesApiMessagesPost
      */
@@ -13440,20 +13941,6 @@ export interface MessagesApiMessagesPostRequest {
      * @memberof MessagesApiMessagesPost
      */
     readonly requireOpenAccount?: boolean
-
-    /**
-     * Use random account (if available) to send the message, if the account specified is closed
-     * @type {boolean}
-     * @memberof MessagesApiMessagesPost
-     */
-    readonly useRandomAccountIfAccountClosed?: boolean
-
-    /**
-     * Includes the default marketing message for the account in the message
-     * @type {boolean}
-     * @memberof MessagesApiMessagesPost
-     */
-    readonly includeMarketingMessage?: boolean
 
     /**
      * 
@@ -13558,7 +14045,7 @@ export interface MessagesApiMessagesSearchRequest {
      * @type {Array<'note' | 'pending' | 'error'>}
      * @memberof MessagesApiMessagesSearch
      */
-    readonly status?: Array<'note' | 'pending' | 'error'>
+    readonly status?: Array<MessagesSearchStatusEnum>
 }
 
 /**
@@ -13590,6 +14077,48 @@ export interface MessagesApiMessagesSendRequest {
 }
 
 /**
+ * Request parameters for messagesTranscribe operation in MessagesApi.
+ * @export
+ * @interface MessagesApiMessagesTranscribeRequest
+ */
+export interface MessagesApiMessagesTranscribeRequest {
+    /**
+     * 
+     * @type {string}
+     * @memberof MessagesApiMessagesTranscribe
+     */
+    readonly accountId: string
+
+    /**
+     * 
+     * @type {string}
+     * @memberof MessagesApiMessagesTranscribe
+     */
+    readonly chatId: string
+
+    /**
+     * 
+     * @type {string}
+     * @memberof MessagesApiMessagesTranscribe
+     */
+    readonly id: string
+
+    /**
+     * 
+     * @type {number}
+     * @memberof MessagesApiMessagesTranscribe
+     */
+    readonly index: number
+
+    /**
+     * If true, the API will wait for the transcription to be completed before returning
+     * @type {boolean}
+     * @memberof MessagesApiMessagesTranscribe
+     */
+    readonly waitForCompletion?: boolean
+}
+
+/**
  * Request parameters for permanentlyStoreAttachments operation in MessagesApi.
  * @export
  * @interface MessagesApiPermanentlyStoreAttachmentsRequest
@@ -13615,6 +14144,13 @@ export interface MessagesApiPermanentlyStoreAttachmentsRequest {
      * @memberof MessagesApiPermanentlyStoreAttachments
      */
     readonly id: string
+
+    /**
+     * If true, the API will wait for the attachments to be stored before returning
+     * @type {boolean}
+     * @memberof MessagesApiPermanentlyStoreAttachments
+     */
+    readonly waitForCompletion?: boolean
 }
 
 /**
@@ -13626,25 +14162,50 @@ export interface MessagesApiPermanentlyStoreAttachmentsRequest {
 export class MessagesApi extends BaseAPI {
     /**
      * 
+     * @summary Perform bulk actions on messages
+     * @param {MessagesApiMessagesBulkActionRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof MessagesApi
+     */
+    public messagesBulkAction(requestParameters: MessagesApiMessagesBulkActionRequest, options?: RawAxiosRequestConfig) {
+        return MessagesApiFp(this.configuration).messagesBulkAction(requestParameters.status, requestParameters.accountId, requestParameters.range, requestParameters.chatId, requestParameters.messagesBulkActionRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Bulk message Get
+     * @param {MessagesApiMessagesBulkGetRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof MessagesApi
+     */
+    public messagesBulkGet(requestParameters: MessagesApiMessagesBulkGetRequest, options?: RawAxiosRequestConfig) {
+        return MessagesApiFp(this.configuration).messagesBulkGet(requestParameters.ids, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
      * @summary Delete a message
      * @param {MessagesApiMessagesDeleteRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof MessagesApi
      */
-    public messagesDelete(requestParameters: MessagesApiMessagesDeleteRequest, options?: AxiosRequestConfig) {
+    public messagesDelete(requestParameters: MessagesApiMessagesDeleteRequest, options?: RawAxiosRequestConfig) {
         return MessagesApiFp(this.configuration).messagesDelete(requestParameters.accountId, requestParameters.chatId, requestParameters.id, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * 
-     * @summary Clears all pending/error messages
+     * @summary Clears all pending/error messages. Deprecated, use the /messages/bulk-action route instead
      * @param {MessagesApiMessagesDeletePendingRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
+     * @deprecated
      * @throws {RequiredError}
      * @memberof MessagesApi
      */
-    public messagesDeletePending(requestParameters: MessagesApiMessagesDeletePendingRequest, options?: AxiosRequestConfig) {
+    public messagesDeletePending(requestParameters: MessagesApiMessagesDeletePendingRequest, options?: RawAxiosRequestConfig) {
         return MessagesApiFp(this.configuration).messagesDeletePending(requestParameters.status, requestParameters.accountId, requestParameters.chatId, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -13655,7 +14216,7 @@ export class MessagesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof MessagesApi
      */
-    public messagesForward(requestParameters: MessagesApiMessagesForwardRequest, options?: AxiosRequestConfig) {
+    public messagesForward(requestParameters: MessagesApiMessagesForwardRequest, options?: RawAxiosRequestConfig) {
         return MessagesApiFp(this.configuration).messagesForward(requestParameters.accountId, requestParameters.chatId, requestParameters.id, requestParameters.toChatId, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -13667,7 +14228,7 @@ export class MessagesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof MessagesApi
      */
-    public messagesGet(requestParameters: MessagesApiMessagesGetRequest, options?: AxiosRequestConfig) {
+    public messagesGet(requestParameters: MessagesApiMessagesGetRequest, options?: RawAxiosRequestConfig) {
         return MessagesApiFp(this.configuration).messagesGet(requestParameters.accountId, requestParameters.chatId, requestParameters.range, requestParameters.action, requestParameters.beforeId, requestParameters.count, requestParameters.forceReload, requestParameters.fetchFromPlatform, requestParameters.status, requestParameters.fromMe, requestParameters.attachmentType, requestParameters.includeCursorMessage, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -13679,18 +14240,20 @@ export class MessagesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof MessagesApi
      */
-    public messagesPatch(requestParameters: MessagesApiMessagesPatchRequest, options?: AxiosRequestConfig) {
+    public messagesPatch(requestParameters: MessagesApiMessagesPatchRequest, options?: RawAxiosRequestConfig) {
         return MessagesApiFp(this.configuration).messagesPatch(requestParameters.accountId, requestParameters.chatId, requestParameters.id, requestParameters.messagesPatchRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * Retry all the messages in a given status
+     * @summary Use the /messages/bulk-action route instead
      * @param {MessagesApiMessagesPatchPendingRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
+     * @deprecated
      * @throws {RequiredError}
      * @memberof MessagesApi
      */
-    public messagesPatchPending(requestParameters: MessagesApiMessagesPatchPendingRequest, options?: AxiosRequestConfig) {
+    public messagesPatchPending(requestParameters: MessagesApiMessagesPatchPendingRequest, options?: RawAxiosRequestConfig) {
         return MessagesApiFp(this.configuration).messagesPatchPending(requestParameters.status, requestParameters.messagesPatchPendingRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -13702,8 +14265,8 @@ export class MessagesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof MessagesApi
      */
-    public messagesPost(requestParameters: MessagesApiMessagesPostRequest, options?: AxiosRequestConfig) {
-        return MessagesApiFp(this.configuration).messagesPost(requestParameters.accountId, requestParameters.chatId, requestParameters.requireOpenAccount, requestParameters.useRandomAccountIfAccountClosed, requestParameters.includeMarketingMessage, requestParameters.messageCompose, options).then((request) => request(this.axios, this.basePath));
+    public messagesPost(requestParameters: MessagesApiMessagesPostRequest, options?: RawAxiosRequestConfig) {
+        return MessagesApiFp(this.configuration).messagesPost(requestParameters.accountId, requestParameters.chatId, requestParameters.requireOpenAccount, requestParameters.messageCompose, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -13714,7 +14277,7 @@ export class MessagesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof MessagesApi
      */
-    public messagesRefresh(requestParameters: MessagesApiMessagesRefreshRequest, options?: AxiosRequestConfig) {
+    public messagesRefresh(requestParameters: MessagesApiMessagesRefreshRequest, options?: RawAxiosRequestConfig) {
         return MessagesApiFp(this.configuration).messagesRefresh(requestParameters.accountId, requestParameters.chatId, requestParameters.id, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -13726,7 +14289,7 @@ export class MessagesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof MessagesApi
      */
-    public messagesSearch(requestParameters: MessagesApiMessagesSearchRequest = {}, options?: AxiosRequestConfig) {
+    public messagesSearch(requestParameters: MessagesApiMessagesSearchRequest = {}, options?: RawAxiosRequestConfig) {
         return MessagesApiFp(this.configuration).messagesSearch(requestParameters.accountId, requestParameters.range, requestParameters.q, requestParameters.page, requestParameters.count, requestParameters.chatId, requestParameters.returnChats, requestParameters.fromMe, requestParameters.status, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -13738,8 +14301,20 @@ export class MessagesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof MessagesApi
      */
-    public messagesSend(requestParameters: MessagesApiMessagesSendRequest, options?: AxiosRequestConfig) {
+    public messagesSend(requestParameters: MessagesApiMessagesSendRequest, options?: RawAxiosRequestConfig) {
         return MessagesApiFp(this.configuration).messagesSend(requestParameters.accountId, requestParameters.requireOpenAccount, requestParameters.multiMessageCompose, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Transcribe a voice message
+     * @param {MessagesApiMessagesTranscribeRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof MessagesApi
+     */
+    public messagesTranscribe(requestParameters: MessagesApiMessagesTranscribeRequest, options?: RawAxiosRequestConfig) {
+        return MessagesApiFp(this.configuration).messagesTranscribe(requestParameters.accountId, requestParameters.chatId, requestParameters.id, requestParameters.index, requestParameters.waitForCompletion, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -13750,10 +14325,225 @@ export class MessagesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof MessagesApi
      */
-    public permanentlyStoreAttachments(requestParameters: MessagesApiPermanentlyStoreAttachmentsRequest, options?: AxiosRequestConfig) {
-        return MessagesApiFp(this.configuration).permanentlyStoreAttachments(requestParameters.accountId, requestParameters.chatId, requestParameters.id, options).then((request) => request(this.axios, this.basePath));
+    public permanentlyStoreAttachments(requestParameters: MessagesApiPermanentlyStoreAttachmentsRequest, options?: RawAxiosRequestConfig) {
+        return MessagesApiFp(this.configuration).permanentlyStoreAttachments(requestParameters.accountId, requestParameters.chatId, requestParameters.id, requestParameters.waitForCompletion, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
+/**
+ * @export
+ */
+export const MessagesBulkActionStatusEnum = {
+    Pending: 'pending',
+    Error: 'error',
+    Cancelled: 'cancelled'
+} as const;
+export type MessagesBulkActionStatusEnum = typeof MessagesBulkActionStatusEnum[keyof typeof MessagesBulkActionStatusEnum];
+/**
+ * @export
+ */
+export const MessagesDeletePendingStatusEnum = {
+    Pending: 'pending',
+    Error: 'error',
+    Cancelled: 'cancelled'
+} as const;
+export type MessagesDeletePendingStatusEnum = typeof MessagesDeletePendingStatusEnum[keyof typeof MessagesDeletePendingStatusEnum];
+/**
+ * @export
+ */
+export const MessagesPatchPendingStatusEnum = {
+    Pending: 'pending',
+    Error: 'error',
+    Cancelled: 'cancelled'
+} as const;
+export type MessagesPatchPendingStatusEnum = typeof MessagesPatchPendingStatusEnum[keyof typeof MessagesPatchPendingStatusEnum];
+/**
+ * @export
+ */
+export const MessagesSearchStatusEnum = {
+    Note: 'note',
+    Pending: 'pending',
+    Error: 'error'
+} as const;
+export type MessagesSearchStatusEnum = typeof MessagesSearchStatusEnum[keyof typeof MessagesSearchStatusEnum];
+
+
+/**
+ * PostsApi - axios parameter creator
+ * @export
+ */
+export const PostsApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @summary Get posts from a channel
+         * @param {string} accountId 
+         * @param {Array<string>} [id] 
+         * @param {string} [q] Search items by this string
+         * @param {number} [count] Number of items to return
+         * @param {string} [page] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getPosts: async (accountId: string, id?: Array<string>, q?: string, count?: number, page?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'accountId' is not null or undefined
+            assertParamExists('getPosts', 'accountId', accountId)
+            const localVarPath = `/posts/{accountId}`
+                .replace(`{${"accountId"}}`, encodeURIComponent(String(accountId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication chatdaddy required
+            // oauth required
+            await setOAuthToObject(localVarHeaderParameter, "chatdaddy", [], configuration)
+
+            if (id) {
+                localVarQueryParameter['id'] = id;
+            }
+
+            if (q !== undefined) {
+                localVarQueryParameter['q'] = q;
+            }
+
+            if (count !== undefined) {
+                localVarQueryParameter['count'] = count;
+            }
+
+            if (page !== undefined) {
+                localVarQueryParameter['page'] = page;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * PostsApi - functional programming interface
+ * @export
+ */
+export const PostsApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = PostsApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @summary Get posts from a channel
+         * @param {string} accountId 
+         * @param {Array<string>} [id] 
+         * @param {string} [q] Search items by this string
+         * @param {number} [count] Number of items to return
+         * @param {string} [page] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getPosts(accountId: string, id?: Array<string>, q?: string, count?: number, page?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<GetPosts200Response>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getPosts(accountId, id, q, count, page, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['PostsApi.getPosts']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * PostsApi - factory interface
+ * @export
+ */
+export const PostsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = PostsApiFp(configuration)
+    return {
+        /**
+         * 
+         * @summary Get posts from a channel
+         * @param {PostsApiGetPostsRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getPosts(requestParameters: PostsApiGetPostsRequest, options?: RawAxiosRequestConfig): AxiosPromise<GetPosts200Response> {
+            return localVarFp.getPosts(requestParameters.accountId, requestParameters.id, requestParameters.q, requestParameters.count, requestParameters.page, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * Request parameters for getPosts operation in PostsApi.
+ * @export
+ * @interface PostsApiGetPostsRequest
+ */
+export interface PostsApiGetPostsRequest {
+    /**
+     * 
+     * @type {string}
+     * @memberof PostsApiGetPosts
+     */
+    readonly accountId: string
+
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof PostsApiGetPosts
+     */
+    readonly id?: Array<string>
+
+    /**
+     * Search items by this string
+     * @type {string}
+     * @memberof PostsApiGetPosts
+     */
+    readonly q?: string
+
+    /**
+     * Number of items to return
+     * @type {number}
+     * @memberof PostsApiGetPosts
+     */
+    readonly count?: number
+
+    /**
+     * 
+     * @type {string}
+     * @memberof PostsApiGetPosts
+     */
+    readonly page?: string
+}
+
+/**
+ * PostsApi - object-oriented interface
+ * @export
+ * @class PostsApi
+ * @extends {BaseAPI}
+ */
+export class PostsApi extends BaseAPI {
+    /**
+     * 
+     * @summary Get posts from a channel
+     * @param {PostsApiGetPostsRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof PostsApi
+     */
+    public getPosts(requestParameters: PostsApiGetPostsRequest, options?: RawAxiosRequestConfig) {
+        return PostsApiFp(this.configuration).getPosts(requestParameters.accountId, requestParameters.id, requestParameters.q, requestParameters.count, requestParameters.page, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
 
 
 /**
@@ -13771,7 +14561,7 @@ export const ProductApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        orderDetailsGet: async (accountId: string, orderId: string, token?: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        orderDetailsGet: async (accountId: string, orderId: string, token?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('orderDetailsGet', 'accountId', accountId)
             // verify required parameter 'orderId' is not null or undefined
@@ -13819,7 +14609,7 @@ export const ProductApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductsDelete: async (accountId: string, id?: Array<string>, notId?: Array<string>, q?: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        platformProductsDelete: async (accountId: string, id?: Array<string>, notId?: Array<string>, q?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('platformProductsDelete', 'accountId', accountId)
             const localVarPath = `/products/{accountId}`
@@ -13877,7 +14667,7 @@ export const ProductApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductsGet: async (teamId: string, accountId?: Array<string>, category?: string, notCategory?: string, id?: Array<string>, cursor?: string, q?: string, count?: number, returnTotalCount?: boolean, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        platformProductsGet: async (teamId: string, accountId?: Array<string>, category?: string, notCategory?: string, id?: Array<string>, cursor?: string, q?: string, count?: number, returnTotalCount?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'teamId' is not null or undefined
             assertParamExists('platformProductsGet', 'teamId', teamId)
             const localVarPath = `/products`;
@@ -13950,7 +14740,7 @@ export const ProductApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductsPatch: async (accountId: string, id?: Array<string>, notId?: Array<string>, q?: string, platformProductUpdate?: PlatformProductUpdate, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        platformProductsPatch: async (accountId: string, id?: Array<string>, notId?: Array<string>, q?: string, platformProductUpdate?: PlatformProductUpdate, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('platformProductsPatch', 'accountId', accountId)
             const localVarPath = `/products/{accountId}`
@@ -14004,7 +14794,7 @@ export const ProductApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductsPost: async (accountId: string, platformProductsPostRequest?: PlatformProductsPostRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        platformProductsPost: async (accountId: string, platformProductsPostRequest?: PlatformProductsPostRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('platformProductsPost', 'accountId', accountId)
             const localVarPath = `/products`;
@@ -14050,7 +14840,7 @@ export const ProductApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductsSync: async (accountId: string, id?: Array<string>, syncForward?: boolean, syncBackward?: boolean, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        platformProductsSync: async (accountId: string, id?: Array<string>, syncForward?: boolean, syncBackward?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('platformProductsSync', 'accountId', accountId)
             const localVarPath = `/products/sync`;
@@ -14115,9 +14905,11 @@ export const ProductApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async orderDetailsGet(accountId: string, orderId: string, token?: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<OrderDetails>> {
+        async orderDetailsGet(accountId: string, orderId: string, token?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<OrderDetails>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.orderDetailsGet(accountId, orderId, token, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ProductApi.orderDetailsGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -14129,9 +14921,11 @@ export const ProductApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async platformProductsDelete(accountId: string, id?: Array<string>, notId?: Array<string>, q?: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async platformProductsDelete(accountId: string, id?: Array<string>, notId?: Array<string>, q?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.platformProductsDelete(accountId, id, notId, q, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ProductApi.platformProductsDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * Returns the WA catalog. Only available on WA Business apps. 
@@ -14148,9 +14942,11 @@ export const ProductApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async platformProductsGet(teamId: string, accountId?: Array<string>, category?: string, notCategory?: string, id?: Array<string>, cursor?: string, q?: string, count?: number, returnTotalCount?: boolean, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PlatformProductsGet200Response>> {
+        async platformProductsGet(teamId: string, accountId?: Array<string>, category?: string, notCategory?: string, id?: Array<string>, cursor?: string, q?: string, count?: number, returnTotalCount?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PlatformProductsGet200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.platformProductsGet(teamId, accountId, category, notCategory, id, cursor, q, count, returnTotalCount, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ProductApi.platformProductsGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -14163,9 +14959,11 @@ export const ProductApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async platformProductsPatch(accountId: string, id?: Array<string>, notId?: Array<string>, q?: string, platformProductUpdate?: PlatformProductUpdate, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PlatformProductsPost200Response>> {
+        async platformProductsPatch(accountId: string, id?: Array<string>, notId?: Array<string>, q?: string, platformProductUpdate?: PlatformProductUpdate, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PlatformProductsPost200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.platformProductsPatch(accountId, id, notId, q, platformProductUpdate, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ProductApi.platformProductsPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -14175,9 +14973,11 @@ export const ProductApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async platformProductsPost(accountId: string, platformProductsPostRequest?: PlatformProductsPostRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PlatformProductsPost200Response>> {
+        async platformProductsPost(accountId: string, platformProductsPostRequest?: PlatformProductsPostRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PlatformProductsPost200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.platformProductsPost(accountId, platformProductsPostRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ProductApi.platformProductsPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * Trigger sync of the specified products on ChatDaddy with WhatsApp
@@ -14188,9 +14988,11 @@ export const ProductApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async platformProductsSync(accountId: string, id?: Array<string>, syncForward?: boolean, syncBackward?: boolean, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async platformProductsSync(accountId: string, id?: Array<string>, syncForward?: boolean, syncBackward?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.platformProductsSync(accountId, id, syncForward, syncBackward, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ProductApi.platformProductsSync']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -14209,7 +15011,7 @@ export const ProductApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        orderDetailsGet(requestParameters: ProductApiOrderDetailsGetRequest, options?: AxiosRequestConfig): AxiosPromise<OrderDetails> {
+        orderDetailsGet(requestParameters: ProductApiOrderDetailsGetRequest, options?: RawAxiosRequestConfig): AxiosPromise<OrderDetails> {
             return localVarFp.orderDetailsGet(requestParameters.accountId, requestParameters.orderId, requestParameters.token, options).then((request) => request(axios, basePath));
         },
         /**
@@ -14219,7 +15021,7 @@ export const ProductApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductsDelete(requestParameters: ProductApiPlatformProductsDeleteRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        platformProductsDelete(requestParameters: ProductApiPlatformProductsDeleteRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.platformProductsDelete(requestParameters.accountId, requestParameters.id, requestParameters.notId, requestParameters.q, options).then((request) => request(axios, basePath));
         },
         /**
@@ -14229,7 +15031,7 @@ export const ProductApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductsGet(requestParameters: ProductApiPlatformProductsGetRequest, options?: AxiosRequestConfig): AxiosPromise<PlatformProductsGet200Response> {
+        platformProductsGet(requestParameters: ProductApiPlatformProductsGetRequest, options?: RawAxiosRequestConfig): AxiosPromise<PlatformProductsGet200Response> {
             return localVarFp.platformProductsGet(requestParameters.teamId, requestParameters.accountId, requestParameters.category, requestParameters.notCategory, requestParameters.id, requestParameters.cursor, requestParameters.q, requestParameters.count, requestParameters.returnTotalCount, options).then((request) => request(axios, basePath));
         },
         /**
@@ -14239,7 +15041,7 @@ export const ProductApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductsPatch(requestParameters: ProductApiPlatformProductsPatchRequest, options?: AxiosRequestConfig): AxiosPromise<PlatformProductsPost200Response> {
+        platformProductsPatch(requestParameters: ProductApiPlatformProductsPatchRequest, options?: RawAxiosRequestConfig): AxiosPromise<PlatformProductsPost200Response> {
             return localVarFp.platformProductsPatch(requestParameters.accountId, requestParameters.id, requestParameters.notId, requestParameters.q, requestParameters.platformProductUpdate, options).then((request) => request(axios, basePath));
         },
         /**
@@ -14249,7 +15051,7 @@ export const ProductApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductsPost(requestParameters: ProductApiPlatformProductsPostRequest, options?: AxiosRequestConfig): AxiosPromise<PlatformProductsPost200Response> {
+        platformProductsPost(requestParameters: ProductApiPlatformProductsPostRequest, options?: RawAxiosRequestConfig): AxiosPromise<PlatformProductsPost200Response> {
             return localVarFp.platformProductsPost(requestParameters.accountId, requestParameters.platformProductsPostRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -14258,7 +15060,7 @@ export const ProductApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductsSync(requestParameters: ProductApiPlatformProductsSyncRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        platformProductsSync(requestParameters: ProductApiPlatformProductsSyncRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.platformProductsSync(requestParameters.accountId, requestParameters.id, requestParameters.syncForward, requestParameters.syncBackward, options).then((request) => request(axios, basePath));
         },
     };
@@ -14510,7 +15312,7 @@ export class ProductApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ProductApi
      */
-    public orderDetailsGet(requestParameters: ProductApiOrderDetailsGetRequest, options?: AxiosRequestConfig) {
+    public orderDetailsGet(requestParameters: ProductApiOrderDetailsGetRequest, options?: RawAxiosRequestConfig) {
         return ProductApiFp(this.configuration).orderDetailsGet(requestParameters.accountId, requestParameters.orderId, requestParameters.token, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -14522,7 +15324,7 @@ export class ProductApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ProductApi
      */
-    public platformProductsDelete(requestParameters: ProductApiPlatformProductsDeleteRequest, options?: AxiosRequestConfig) {
+    public platformProductsDelete(requestParameters: ProductApiPlatformProductsDeleteRequest, options?: RawAxiosRequestConfig) {
         return ProductApiFp(this.configuration).platformProductsDelete(requestParameters.accountId, requestParameters.id, requestParameters.notId, requestParameters.q, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -14534,7 +15336,7 @@ export class ProductApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ProductApi
      */
-    public platformProductsGet(requestParameters: ProductApiPlatformProductsGetRequest, options?: AxiosRequestConfig) {
+    public platformProductsGet(requestParameters: ProductApiPlatformProductsGetRequest, options?: RawAxiosRequestConfig) {
         return ProductApiFp(this.configuration).platformProductsGet(requestParameters.teamId, requestParameters.accountId, requestParameters.category, requestParameters.notCategory, requestParameters.id, requestParameters.cursor, requestParameters.q, requestParameters.count, requestParameters.returnTotalCount, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -14546,7 +15348,7 @@ export class ProductApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ProductApi
      */
-    public platformProductsPatch(requestParameters: ProductApiPlatformProductsPatchRequest, options?: AxiosRequestConfig) {
+    public platformProductsPatch(requestParameters: ProductApiPlatformProductsPatchRequest, options?: RawAxiosRequestConfig) {
         return ProductApiFp(this.configuration).platformProductsPatch(requestParameters.accountId, requestParameters.id, requestParameters.notId, requestParameters.q, requestParameters.platformProductUpdate, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -14558,7 +15360,7 @@ export class ProductApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ProductApi
      */
-    public platformProductsPost(requestParameters: ProductApiPlatformProductsPostRequest, options?: AxiosRequestConfig) {
+    public platformProductsPost(requestParameters: ProductApiPlatformProductsPostRequest, options?: RawAxiosRequestConfig) {
         return ProductApiFp(this.configuration).platformProductsPost(requestParameters.accountId, requestParameters.platformProductsPostRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -14569,10 +15371,11 @@ export class ProductApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ProductApi
      */
-    public platformProductsSync(requestParameters: ProductApiPlatformProductsSyncRequest, options?: AxiosRequestConfig) {
+    public platformProductsSync(requestParameters: ProductApiPlatformProductsSyncRequest, options?: RawAxiosRequestConfig) {
         return ProductApiFp(this.configuration).platformProductsSync(requestParameters.accountId, requestParameters.id, requestParameters.syncForward, requestParameters.syncBackward, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -14589,7 +15392,7 @@ export const ProductCategoriesApiAxiosParamCreator = function (configuration?: C
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductCategoriesDelete: async (accountId: string, categoryId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        platformProductCategoriesDelete: async (accountId: string, categoryId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('platformProductCategoriesDelete', 'accountId', accountId)
             // verify required parameter 'categoryId' is not null or undefined
@@ -14631,7 +15434,7 @@ export const ProductCategoriesApiAxiosParamCreator = function (configuration?: C
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductCategoriesGet: async (teamId: string, accountId?: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        platformProductCategoriesGet: async (teamId: string, accountId?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'teamId' is not null or undefined
             assertParamExists('platformProductCategoriesGet', 'teamId', teamId)
             const localVarPath = `/product-categories`;
@@ -14674,7 +15477,7 @@ export const ProductCategoriesApiAxiosParamCreator = function (configuration?: C
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductCategoriesPatch: async (accountId: string, categoryId: string, productCategoryPatchRequest?: ProductCategoryPatchRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        platformProductCategoriesPatch: async (accountId: string, categoryId: string, productCategoryPatchRequest?: ProductCategoryPatchRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('platformProductCategoriesPatch', 'accountId', accountId)
             // verify required parameter 'categoryId' is not null or undefined
@@ -14719,7 +15522,7 @@ export const ProductCategoriesApiAxiosParamCreator = function (configuration?: C
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductCategoriesPost: async (accountId: string, platformProductCategoriesPostRequest?: PlatformProductCategoriesPostRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        platformProductCategoriesPost: async (accountId: string, platformProductCategoriesPostRequest?: PlatformProductCategoriesPostRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('platformProductCategoriesPost', 'accountId', accountId)
             const localVarPath = `/product-categories/{accountId}`
@@ -14771,9 +15574,11 @@ export const ProductCategoriesApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async platformProductCategoriesDelete(accountId: string, categoryId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async platformProductCategoriesDelete(accountId: string, categoryId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.platformProductCategoriesDelete(accountId, categoryId, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ProductCategoriesApi.platformProductCategoriesDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -14783,9 +15588,11 @@ export const ProductCategoriesApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async platformProductCategoriesGet(teamId: string, accountId?: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PlatformProductCategoriesGet200Response>> {
+        async platformProductCategoriesGet(teamId: string, accountId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PlatformProductCategoriesGet200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.platformProductCategoriesGet(teamId, accountId, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ProductCategoriesApi.platformProductCategoriesGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * Update name of the category or add/remove a product
@@ -14796,9 +15603,11 @@ export const ProductCategoriesApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async platformProductCategoriesPatch(accountId: string, categoryId: string, productCategoryPatchRequest?: ProductCategoryPatchRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async platformProductCategoriesPatch(accountId: string, categoryId: string, productCategoryPatchRequest?: ProductCategoryPatchRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.platformProductCategoriesPatch(accountId, categoryId, productCategoryPatchRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ProductCategoriesApi.platformProductCategoriesPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -14808,9 +15617,11 @@ export const ProductCategoriesApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async platformProductCategoriesPost(accountId: string, platformProductCategoriesPostRequest?: PlatformProductCategoriesPostRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ProductCategory>> {
+        async platformProductCategoriesPost(accountId: string, platformProductCategoriesPostRequest?: PlatformProductCategoriesPostRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ProductCategory>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.platformProductCategoriesPost(accountId, platformProductCategoriesPostRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ProductCategoriesApi.platformProductCategoriesPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -14829,7 +15640,7 @@ export const ProductCategoriesApiFactory = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductCategoriesDelete(requestParameters: ProductCategoriesApiPlatformProductCategoriesDeleteRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        platformProductCategoriesDelete(requestParameters: ProductCategoriesApiPlatformProductCategoriesDeleteRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.platformProductCategoriesDelete(requestParameters.accountId, requestParameters.categoryId, options).then((request) => request(axios, basePath));
         },
         /**
@@ -14839,7 +15650,7 @@ export const ProductCategoriesApiFactory = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductCategoriesGet(requestParameters: ProductCategoriesApiPlatformProductCategoriesGetRequest, options?: AxiosRequestConfig): AxiosPromise<PlatformProductCategoriesGet200Response> {
+        platformProductCategoriesGet(requestParameters: ProductCategoriesApiPlatformProductCategoriesGetRequest, options?: RawAxiosRequestConfig): AxiosPromise<PlatformProductCategoriesGet200Response> {
             return localVarFp.platformProductCategoriesGet(requestParameters.teamId, requestParameters.accountId, options).then((request) => request(axios, basePath));
         },
         /**
@@ -14849,7 +15660,7 @@ export const ProductCategoriesApiFactory = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductCategoriesPatch(requestParameters: ProductCategoriesApiPlatformProductCategoriesPatchRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        platformProductCategoriesPatch(requestParameters: ProductCategoriesApiPlatformProductCategoriesPatchRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.platformProductCategoriesPatch(requestParameters.accountId, requestParameters.categoryId, requestParameters.productCategoryPatchRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -14859,7 +15670,7 @@ export const ProductCategoriesApiFactory = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        platformProductCategoriesPost(requestParameters: ProductCategoriesApiPlatformProductCategoriesPostRequest, options?: AxiosRequestConfig): AxiosPromise<ProductCategory> {
+        platformProductCategoriesPost(requestParameters: ProductCategoriesApiPlatformProductCategoriesPostRequest, options?: RawAxiosRequestConfig): AxiosPromise<ProductCategory> {
             return localVarFp.platformProductCategoriesPost(requestParameters.accountId, requestParameters.platformProductCategoriesPostRequest, options).then((request) => request(axios, basePath));
         },
     };
@@ -14971,7 +15782,7 @@ export class ProductCategoriesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ProductCategoriesApi
      */
-    public platformProductCategoriesDelete(requestParameters: ProductCategoriesApiPlatformProductCategoriesDeleteRequest, options?: AxiosRequestConfig) {
+    public platformProductCategoriesDelete(requestParameters: ProductCategoriesApiPlatformProductCategoriesDeleteRequest, options?: RawAxiosRequestConfig) {
         return ProductCategoriesApiFp(this.configuration).platformProductCategoriesDelete(requestParameters.accountId, requestParameters.categoryId, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -14983,7 +15794,7 @@ export class ProductCategoriesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ProductCategoriesApi
      */
-    public platformProductCategoriesGet(requestParameters: ProductCategoriesApiPlatformProductCategoriesGetRequest, options?: AxiosRequestConfig) {
+    public platformProductCategoriesGet(requestParameters: ProductCategoriesApiPlatformProductCategoriesGetRequest, options?: RawAxiosRequestConfig) {
         return ProductCategoriesApiFp(this.configuration).platformProductCategoriesGet(requestParameters.teamId, requestParameters.accountId, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -14995,7 +15806,7 @@ export class ProductCategoriesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ProductCategoriesApi
      */
-    public platformProductCategoriesPatch(requestParameters: ProductCategoriesApiPlatformProductCategoriesPatchRequest, options?: AxiosRequestConfig) {
+    public platformProductCategoriesPatch(requestParameters: ProductCategoriesApiPlatformProductCategoriesPatchRequest, options?: RawAxiosRequestConfig) {
         return ProductCategoriesApiFp(this.configuration).platformProductCategoriesPatch(requestParameters.accountId, requestParameters.categoryId, requestParameters.productCategoryPatchRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -15007,10 +15818,11 @@ export class ProductCategoriesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ProductCategoriesApi
      */
-    public platformProductCategoriesPost(requestParameters: ProductCategoriesApiPlatformProductCategoriesPostRequest, options?: AxiosRequestConfig) {
+    public platformProductCategoriesPost(requestParameters: ProductCategoriesApiPlatformProductCategoriesPostRequest, options?: RawAxiosRequestConfig) {
         return ProductCategoriesApiFp(this.configuration).platformProductCategoriesPost(requestParameters.accountId, requestParameters.platformProductCategoriesPostRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -15027,7 +15839,7 @@ export const ProfileValidationApiAxiosParamCreator = function (configuration?: C
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        profileMessengerPost: async (accountId: string, profileMessengerPostRequest?: ProfileMessengerPostRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        profileMessengerPost: async (accountId: string, profileMessengerPostRequest?: ProfileMessengerPostRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('profileMessengerPost', 'accountId', accountId)
             const localVarPath = `/messenger/profile-validation/{accountId}`
@@ -15079,9 +15891,11 @@ export const ProfileValidationApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async profileMessengerPost(accountId: string, profileMessengerPostRequest?: ProfileMessengerPostRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async profileMessengerPost(accountId: string, profileMessengerPostRequest?: ProfileMessengerPostRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.profileMessengerPost(accountId, profileMessengerPostRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ProfileValidationApi.profileMessengerPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -15100,7 +15914,7 @@ export const ProfileValidationApiFactory = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        profileMessengerPost(requestParameters: ProfileValidationApiProfileMessengerPostRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        profileMessengerPost(requestParameters: ProfileValidationApiProfileMessengerPostRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.profileMessengerPost(requestParameters.accountId, requestParameters.profileMessengerPostRequest, options).then((request) => request(axios, basePath));
         },
     };
@@ -15142,10 +15956,11 @@ export class ProfileValidationApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ProfileValidationApi
      */
-    public profileMessengerPost(requestParameters: ProfileValidationApiProfileMessengerPostRequest, options?: AxiosRequestConfig) {
+    public profileMessengerPost(requestParameters: ProfileValidationApiProfileMessengerPostRequest, options?: RawAxiosRequestConfig) {
         return ProfileValidationApiFp(this.configuration).profileMessengerPost(requestParameters.accountId, requestParameters.profileMessengerPostRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -15162,7 +15977,7 @@ export const SMSApiAxiosParamCreator = function (configuration?: Configuration) 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        smsSenderIdPost: async (accountId: string, smsSenderIdPostRequest?: SmsSenderIdPostRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        smsSenderIdPost: async (accountId: string, smsSenderIdPostRequest?: SmsSenderIdPostRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('smsSenderIdPost', 'accountId', accountId)
             const localVarPath = `/sms/sender-id/{accountId}`
@@ -15204,7 +16019,7 @@ export const SMSApiAxiosParamCreator = function (configuration?: Configuration) 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        webhookSmsLimitPost: async (triggerSecret: string, webhookSmsLimitPostRequest?: WebhookSmsLimitPostRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        webhookSmsLimitPost: async (triggerSecret: string, webhookSmsLimitPostRequest?: WebhookSmsLimitPostRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'triggerSecret' is not null or undefined
             assertParamExists('webhookSmsLimitPost', 'triggerSecret', triggerSecret)
             const localVarPath = `/sms/webhook/limit/{triggerSecret}`
@@ -15252,9 +16067,11 @@ export const SMSApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async smsSenderIdPost(accountId: string, smsSenderIdPostRequest?: SmsSenderIdPostRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async smsSenderIdPost(accountId: string, smsSenderIdPostRequest?: SmsSenderIdPostRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.smsSenderIdPost(accountId, smsSenderIdPostRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['SMSApi.smsSenderIdPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -15264,9 +16081,11 @@ export const SMSApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async webhookSmsLimitPost(triggerSecret: string, webhookSmsLimitPostRequest?: WebhookSmsLimitPostRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async webhookSmsLimitPost(triggerSecret: string, webhookSmsLimitPostRequest?: WebhookSmsLimitPostRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.webhookSmsLimitPost(triggerSecret, webhookSmsLimitPostRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['SMSApi.webhookSmsLimitPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -15285,7 +16104,7 @@ export const SMSApiFactory = function (configuration?: Configuration, basePath?:
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        smsSenderIdPost(requestParameters: SMSApiSmsSenderIdPostRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        smsSenderIdPost(requestParameters: SMSApiSmsSenderIdPostRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.smsSenderIdPost(requestParameters.accountId, requestParameters.smsSenderIdPostRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -15295,7 +16114,7 @@ export const SMSApiFactory = function (configuration?: Configuration, basePath?:
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        webhookSmsLimitPost(requestParameters: SMSApiWebhookSmsLimitPostRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        webhookSmsLimitPost(requestParameters: SMSApiWebhookSmsLimitPostRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.webhookSmsLimitPost(requestParameters.triggerSecret, requestParameters.webhookSmsLimitPostRequest, options).then((request) => request(axios, basePath));
         },
     };
@@ -15358,7 +16177,7 @@ export class SMSApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof SMSApi
      */
-    public smsSenderIdPost(requestParameters: SMSApiSmsSenderIdPostRequest, options?: AxiosRequestConfig) {
+    public smsSenderIdPost(requestParameters: SMSApiSmsSenderIdPostRequest, options?: RawAxiosRequestConfig) {
         return SMSApiFp(this.configuration).smsSenderIdPost(requestParameters.accountId, requestParameters.smsSenderIdPostRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -15370,10 +16189,11 @@ export class SMSApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof SMSApi
      */
-    public webhookSmsLimitPost(requestParameters: SMSApiWebhookSmsLimitPostRequest, options?: AxiosRequestConfig) {
+    public webhookSmsLimitPost(requestParameters: SMSApiWebhookSmsLimitPostRequest, options?: RawAxiosRequestConfig) {
         return SMSApiFp(this.configuration).webhookSmsLimitPost(requestParameters.triggerSecret, requestParameters.webhookSmsLimitPostRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -15389,7 +16209,7 @@ export const TagsApiAxiosParamCreator = function (configuration?: Configuration)
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tagsDelete: async (name: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        tagsDelete: async (name: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'name' is not null or undefined
             assertParamExists('tagsDelete', 'name', name)
             const localVarPath = `/tags`;
@@ -15434,7 +16254,7 @@ export const TagsApiAxiosParamCreator = function (configuration?: Configuration)
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tagsGet: async (q?: string, count?: number, page?: string, returnTotalCount?: boolean, isCustomField?: boolean, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        tagsGet: async (q?: string, count?: number, page?: string, returnTotalCount?: boolean, isCustomField?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/tags`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -15489,7 +16309,7 @@ export const TagsApiAxiosParamCreator = function (configuration?: Configuration)
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tagsPatch: async (name: string, tagsPostRequest?: TagsPostRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        tagsPatch: async (name: string, tagsPostRequest?: TagsPostRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'name' is not null or undefined
             assertParamExists('tagsPatch', 'name', name)
             const localVarPath = `/tags`;
@@ -15534,7 +16354,7 @@ export const TagsApiAxiosParamCreator = function (configuration?: Configuration)
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tagsPost: async (name: string, tagsPostRequest?: TagsPostRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        tagsPost: async (name: string, tagsPostRequest?: TagsPostRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'name' is not null or undefined
             assertParamExists('tagsPost', 'name', name)
             const localVarPath = `/tags`;
@@ -15588,9 +16408,11 @@ export const TagsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async tagsDelete(name: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async tagsDelete(name: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.tagsDelete(name, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['TagsApi.tagsDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -15603,9 +16425,11 @@ export const TagsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async tagsGet(q?: string, count?: number, page?: string, returnTotalCount?: boolean, isCustomField?: boolean, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TagsGet200Response>> {
+        async tagsGet(q?: string, count?: number, page?: string, returnTotalCount?: boolean, isCustomField?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TagsGet200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.tagsGet(q, count, page, returnTotalCount, isCustomField, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['TagsApi.tagsGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -15614,9 +16438,11 @@ export const TagsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async tagsPatch(name: string, tagsPostRequest?: TagsPostRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Tag>> {
+        async tagsPatch(name: string, tagsPostRequest?: TagsPostRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Tag>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.tagsPatch(name, tagsPostRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['TagsApi.tagsPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -15626,9 +16452,11 @@ export const TagsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async tagsPost(name: string, tagsPostRequest?: TagsPostRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Tag>> {
+        async tagsPost(name: string, tagsPostRequest?: TagsPostRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Tag>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.tagsPost(name, tagsPostRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['TagsApi.tagsPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -15647,7 +16475,7 @@ export const TagsApiFactory = function (configuration?: Configuration, basePath?
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tagsDelete(requestParameters: TagsApiTagsDeleteRequest, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        tagsDelete(requestParameters: TagsApiTagsDeleteRequest, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.tagsDelete(requestParameters.name, options).then((request) => request(axios, basePath));
         },
         /**
@@ -15657,7 +16485,7 @@ export const TagsApiFactory = function (configuration?: Configuration, basePath?
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tagsGet(requestParameters: TagsApiTagsGetRequest = {}, options?: AxiosRequestConfig): AxiosPromise<TagsGet200Response> {
+        tagsGet(requestParameters: TagsApiTagsGetRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<TagsGet200Response> {
             return localVarFp.tagsGet(requestParameters.q, requestParameters.count, requestParameters.page, requestParameters.returnTotalCount, requestParameters.isCustomField, options).then((request) => request(axios, basePath));
         },
         /**
@@ -15666,7 +16494,7 @@ export const TagsApiFactory = function (configuration?: Configuration, basePath?
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tagsPatch(requestParameters: TagsApiTagsPatchRequest, options?: AxiosRequestConfig): AxiosPromise<Tag> {
+        tagsPatch(requestParameters: TagsApiTagsPatchRequest, options?: RawAxiosRequestConfig): AxiosPromise<Tag> {
             return localVarFp.tagsPatch(requestParameters.name, requestParameters.tagsPostRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -15676,7 +16504,7 @@ export const TagsApiFactory = function (configuration?: Configuration, basePath?
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        tagsPost(requestParameters: TagsApiTagsPostRequest, options?: AxiosRequestConfig): AxiosPromise<Tag> {
+        tagsPost(requestParameters: TagsApiTagsPostRequest, options?: RawAxiosRequestConfig): AxiosPromise<Tag> {
             return localVarFp.tagsPost(requestParameters.name, requestParameters.tagsPostRequest, options).then((request) => request(axios, basePath));
         },
     };
@@ -15795,7 +16623,7 @@ export class TagsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof TagsApi
      */
-    public tagsDelete(requestParameters: TagsApiTagsDeleteRequest, options?: AxiosRequestConfig) {
+    public tagsDelete(requestParameters: TagsApiTagsDeleteRequest, options?: RawAxiosRequestConfig) {
         return TagsApiFp(this.configuration).tagsDelete(requestParameters.name, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -15807,7 +16635,7 @@ export class TagsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof TagsApi
      */
-    public tagsGet(requestParameters: TagsApiTagsGetRequest = {}, options?: AxiosRequestConfig) {
+    public tagsGet(requestParameters: TagsApiTagsGetRequest = {}, options?: RawAxiosRequestConfig) {
         return TagsApiFp(this.configuration).tagsGet(requestParameters.q, requestParameters.count, requestParameters.page, requestParameters.returnTotalCount, requestParameters.isCustomField, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -15818,7 +16646,7 @@ export class TagsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof TagsApi
      */
-    public tagsPatch(requestParameters: TagsApiTagsPatchRequest, options?: AxiosRequestConfig) {
+    public tagsPatch(requestParameters: TagsApiTagsPatchRequest, options?: RawAxiosRequestConfig) {
         return TagsApiFp(this.configuration).tagsPatch(requestParameters.name, requestParameters.tagsPostRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -15830,10 +16658,11 @@ export class TagsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof TagsApi
      */
-    public tagsPost(requestParameters: TagsApiTagsPostRequest, options?: AxiosRequestConfig) {
+    public tagsPost(requestParameters: TagsApiTagsPostRequest, options?: RawAxiosRequestConfig) {
         return TagsApiFp(this.configuration).tagsPost(requestParameters.name, requestParameters.tagsPostRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -15850,7 +16679,7 @@ export const TemplatesApiAxiosParamCreator = function (configuration?: Configura
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        templatesDelete: async (accountId: string, templateId: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        templatesDelete: async (accountId: string, templateId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('templatesDelete', 'accountId', accountId)
             // verify required parameter 'templateId' is not null or undefined
@@ -15892,7 +16721,7 @@ export const TemplatesApiAxiosParamCreator = function (configuration?: Configura
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        templatesSubmitForReview: async (accountId: string, templatesSubmitForReviewRequest?: TemplatesSubmitForReviewRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        templatesSubmitForReview: async (accountId: string, templatesSubmitForReviewRequest?: TemplatesSubmitForReviewRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'accountId' is not null or undefined
             assertParamExists('templatesSubmitForReview', 'accountId', accountId)
             const localVarPath = `/templates/{accountId}/submit-for-review`
@@ -15944,9 +16773,11 @@ export const TemplatesApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async templatesDelete(accountId: string, templateId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+        async templatesDelete(accountId: string, templateId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.templatesDelete(accountId, templateId, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['TemplatesApi.templatesDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -15956,9 +16787,11 @@ export const TemplatesApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async templatesSubmitForReview(accountId: string, templatesSubmitForReviewRequest?: TemplatesSubmitForReviewRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TemplatesSubmitForReview200Response>> {
+        async templatesSubmitForReview(accountId: string, templatesSubmitForReviewRequest?: TemplatesSubmitForReviewRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TemplatesSubmitForReview200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.templatesSubmitForReview(accountId, templatesSubmitForReviewRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['TemplatesApi.templatesSubmitForReview']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -15977,7 +16810,7 @@ export const TemplatesApiFactory = function (configuration?: Configuration, base
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        templatesDelete(requestParameters: TemplatesApiTemplatesDeleteRequest, options?: AxiosRequestConfig): AxiosPromise<void> {
+        templatesDelete(requestParameters: TemplatesApiTemplatesDeleteRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.templatesDelete(requestParameters.accountId, requestParameters.templateId, options).then((request) => request(axios, basePath));
         },
         /**
@@ -15987,7 +16820,7 @@ export const TemplatesApiFactory = function (configuration?: Configuration, base
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        templatesSubmitForReview(requestParameters: TemplatesApiTemplatesSubmitForReviewRequest, options?: AxiosRequestConfig): AxiosPromise<TemplatesSubmitForReview200Response> {
+        templatesSubmitForReview(requestParameters: TemplatesApiTemplatesSubmitForReviewRequest, options?: RawAxiosRequestConfig): AxiosPromise<TemplatesSubmitForReview200Response> {
             return localVarFp.templatesSubmitForReview(requestParameters.accountId, requestParameters.templatesSubmitForReviewRequest, options).then((request) => request(axios, basePath));
         },
     };
@@ -16050,7 +16883,7 @@ export class TemplatesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof TemplatesApi
      */
-    public templatesDelete(requestParameters: TemplatesApiTemplatesDeleteRequest, options?: AxiosRequestConfig) {
+    public templatesDelete(requestParameters: TemplatesApiTemplatesDeleteRequest, options?: RawAxiosRequestConfig) {
         return TemplatesApiFp(this.configuration).templatesDelete(requestParameters.accountId, requestParameters.templateId, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -16062,10 +16895,11 @@ export class TemplatesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof TemplatesApi
      */
-    public templatesSubmitForReview(requestParameters: TemplatesApiTemplatesSubmitForReviewRequest, options?: AxiosRequestConfig) {
+    public templatesSubmitForReview(requestParameters: TemplatesApiTemplatesSubmitForReviewRequest, options?: RawAxiosRequestConfig) {
         return TemplatesApiFp(this.configuration).templatesSubmitForReview(requestParameters.accountId, requestParameters.templatesSubmitForReviewRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
 /**
@@ -16083,7 +16917,7 @@ export const WebhookApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        webhookMessengerGet: async (hubMode: string, hubVerifyToken: string, hubChallenge: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        webhookMessengerGet: async (hubMode: string, hubVerifyToken: string, hubChallenge: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'hubMode' is not null or undefined
             assertParamExists('webhookMessengerGet', 'hubMode', hubMode)
             // verify required parameter 'hubVerifyToken' is not null or undefined
@@ -16133,7 +16967,7 @@ export const WebhookApiAxiosParamCreator = function (configuration?: Configurati
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        webhookMessengerPost: async (accountId?: string, webhookMessengerPostRequest?: WebhookMessengerPostRequest, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        webhookMessengerPost: async (accountId?: string, webhookMessengerPostRequest?: WebhookMessengerPostRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/messenger/webhook`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -16183,9 +17017,11 @@ export const WebhookApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async webhookMessengerGet(hubMode: string, hubVerifyToken: string, hubChallenge: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<string>> {
+        async webhookMessengerGet(hubMode: string, hubVerifyToken: string, hubChallenge: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<string>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.webhookMessengerGet(hubMode, hubVerifyToken, hubChallenge, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['WebhookApi.webhookMessengerGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
          * 
@@ -16195,9 +17031,11 @@ export const WebhookApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async webhookMessengerPost(accountId?: string, webhookMessengerPostRequest?: WebhookMessengerPostRequest, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsLogout200Response>> {
+        async webhookMessengerPost(accountId?: string, webhookMessengerPostRequest?: WebhookMessengerPostRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AccountsDelete200Response>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.webhookMessengerPost(accountId, webhookMessengerPostRequest, options);
-            return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['WebhookApi.webhookMessengerPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
 };
@@ -16216,7 +17054,7 @@ export const WebhookApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        webhookMessengerGet(requestParameters: WebhookApiWebhookMessengerGetRequest, options?: AxiosRequestConfig): AxiosPromise<string> {
+        webhookMessengerGet(requestParameters: WebhookApiWebhookMessengerGetRequest, options?: RawAxiosRequestConfig): AxiosPromise<string> {
             return localVarFp.webhookMessengerGet(requestParameters.hubMode, requestParameters.hubVerifyToken, requestParameters.hubChallenge, options).then((request) => request(axios, basePath));
         },
         /**
@@ -16226,7 +17064,7 @@ export const WebhookApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        webhookMessengerPost(requestParameters: WebhookApiWebhookMessengerPostRequest = {}, options?: AxiosRequestConfig): AxiosPromise<AccountsLogout200Response> {
+        webhookMessengerPost(requestParameters: WebhookApiWebhookMessengerPostRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<AccountsDelete200Response> {
             return localVarFp.webhookMessengerPost(requestParameters.accountId, requestParameters.webhookMessengerPostRequest, options).then((request) => request(axios, basePath));
         },
     };
@@ -16296,7 +17134,7 @@ export class WebhookApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof WebhookApi
      */
-    public webhookMessengerGet(requestParameters: WebhookApiWebhookMessengerGetRequest, options?: AxiosRequestConfig) {
+    public webhookMessengerGet(requestParameters: WebhookApiWebhookMessengerGetRequest, options?: RawAxiosRequestConfig) {
         return WebhookApiFp(this.configuration).webhookMessengerGet(requestParameters.hubMode, requestParameters.hubVerifyToken, requestParameters.hubChallenge, options).then((request) => request(this.axios, this.basePath));
     }
 
@@ -16308,9 +17146,10 @@ export class WebhookApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof WebhookApi
      */
-    public webhookMessengerPost(requestParameters: WebhookApiWebhookMessengerPostRequest = {}, options?: AxiosRequestConfig) {
+    public webhookMessengerPost(requestParameters: WebhookApiWebhookMessengerPostRequest = {}, options?: RawAxiosRequestConfig) {
         return WebhookApiFp(this.configuration).webhookMessengerPost(requestParameters.accountId, requestParameters.webhookMessengerPostRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
+
 
 
